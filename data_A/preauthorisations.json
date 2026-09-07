@@ -1,0 +1,51 @@
+[
+  {
+    "preauth_id": "PA-5521",
+    "member_id": "M-2214",
+    "procedure_code": "62480",
+    "valid_from": "2026-08-01",
+    "valid_to": "2026-10-31"
+  },
+  {
+    "preauth_id": "PA-5640",
+    "member_id": "M-6118",
+    "procedure_code": "29881",
+    "valid_from": "2026-03-01",
+    "valid_to": "2026-05-31"
+  },
+  {
+    "preauth_id": "PA-5702",
+    "member_id": "M-5502",
+    "procedure_code": "27447",
+    "valid_from": "2026-07-01",
+    "valid_to": "2026-12-31"
+  },
+  {
+    "preauth_id": "PA-9001",
+    "member_id": "M-7002",
+    "procedure_code": "47562",
+    "valid_from": "2026-09-01",
+    "valid_to": "2026-11-30"
+  },
+  {
+    "preauth_id": "PA-9002",
+    "member_id": "M-7004",
+    "procedure_code": "27447",
+    "valid_from": "2026-08-01",
+    "valid_to": "2026-12-31"
+  },
+  {
+    "preauth_id": "PA-9003",
+    "member_id": "M-7004",
+    "procedure_code": "62480",
+    "valid_from": "2026-07-01",
+    "valid_to": "2026-10-31"
+  },
+  {
+    "preauth_id": "PA-9004",
+    "member_id": "M-7001",
+    "procedure_code": "29881",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-03-31"
+  }
+]
