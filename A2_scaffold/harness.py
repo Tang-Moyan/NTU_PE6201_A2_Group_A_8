@@ -12,7 +12,7 @@ A CODE CHECK compares the answer with your answer key.
     It is what produces the number.
 
 A JUDGEMENT CHECK has someone read the record and decide.
-    "Does the reason actually name the band and the window?"
+    "Does the reason actually name the exclusion rule that caught the line?"
     A PERSON can do it. A SECOND MODEL can do it. Same kind of check -
     the only difference is who grades. (This is what A1 called L1/L2.
     The names never mattered; the difference does.)
@@ -57,8 +57,7 @@ def load_key(problem=None):
 def load_cases(problem=None):
     """Every case id in the work queue, in file order."""
     problem = problem or config.PROBLEM
-    table, field = (("referrals", "referral_id") if problem == "B"
-                    else ("claims", "claim_id"))
+    table, field = "claims", "claim_id"
     path = os.path.join(config.data_root(), "data_%s" % problem,
                         "%s.json" % table)
     with open(path, encoding="utf-8") as fh:
@@ -89,14 +88,6 @@ def code_check(record, expected):
         if record.get("trigger") != expected["trigger"]:
             fails.append("trigger %r, expected %r"
                          % (record.get("trigger"), expected["trigger"]))
-
-    # A booking must book the RIGHT slot. Problem B only.
-    if expected.get("booked"):
-        got = record.get("booked") or {}
-        for field in ("clinic", "date", "time"):
-            if got.get(field) != expected["booked"][field]:
-                fails.append("booked.%s %r, expected %r"
-                             % (field, got.get(field), expected["booked"][field]))
 
     return (not fails), fails
 
@@ -164,8 +155,7 @@ def _is_negative(expected):
     the act - so, an ask or an escalate."""
     if not expected:
         return False
-    return expected.get("expected_decision") in (
-        "escalate", "request_document", "request_information")
+    return expected.get("expected_decision") in ("escalate", "request_document")
 
 
 # =====================================================================

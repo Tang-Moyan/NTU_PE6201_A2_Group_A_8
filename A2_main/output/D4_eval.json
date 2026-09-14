@@ -1,0 +1,73 @@
+{
+  "name": "D4_eval",
+  "written_at": "2026-09-07T16:19:46",
+  "written_by": "D4/eval_runner.py",
+  "payload": {
+    "trials": 1,
+    "cases": 1,
+    "passed": 1,
+    "pass_rate": 1.0,
+    "negative_trials": 0,
+    "negative_pass_rate": null,
+    "median_turns": 4,
+    "max_turns": 4,
+    "hit_step_cap": 0,
+    "tokens_in": 21000,
+    "tokens_out": 600,
+    "cost_usd": 0.00234,
+    "by_family": {
+      "partly_payable": {
+        "trials": 1,
+        "passed": 1
+      }
+    },
+    "per_case": [
+      {
+        "case_id": "CLM-8842",
+        "trial": 1,
+        "turns": 4,
+        "passed": true,
+        "family": "partly_payable",
+        "negative": false
+      }
+    ],
+    "weak_step_candidates": [
+      [
+        "check_coverage",
+        0,
+        1,
+        0.0
+      ],
+      [
+        "get_claim",
+        0,
+        1,
+        0.0
+      ],
+      [
+        "get_preauthorisation",
+        0,
+        1,
+        0.0
+      ],
+      [
+        "issue_decision_letter",
+        0,
+        1,
+        0.0
+      ],
+      [
+        "lookup_hospital",
+        0,
+        1,
+        0.0
+      ],
+      [
+        "lookup_policy",
+        0,
+        1,
+        0.0
+      ]
+    ]
+  }
+}

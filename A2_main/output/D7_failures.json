@@ -1,0 +1,182 @@
+{
+  "name": "D7_failures",
+  "written_at": "2026-09-07T16:19:46",
+  "written_by": "D7/failure_runs.py",
+  "payload": {
+    "distribution": {
+      "runs": 1,
+      "median_turns": 4,
+      "mean_turns": 4.0,
+      "max_turns": 4,
+      "min_turns": 4,
+      "worst_legitimate_turns": 4,
+      "hit_step_cap": 0,
+      "capped_cases": [],
+      "step_cap": 8,
+      "budget_ceiling": 60000,
+      "histogram": {
+        "4": 1
+      }
+    },
+    "failure_1": {
+      "deletion": "dedup",
+      "layer": "code",
+      "case": "CLM-8842",
+      "before": {
+        "turns": 4,
+        "tool_calls": 8,
+        "tokens": 21600,
+        "cost_usd": 0.00234,
+        "decision": "approve_in_principle",
+        "stopped_by": null
+      },
+      "after": {
+        "turns": 6,
+        "tool_calls": 18,
+        "tokens": 38640,
+        "cost_usd": 0.004116,
+        "decision": "approve_in_principle",
+        "stopped_by": null
+      },
+      "before_set": {
+        "trials": 1,
+        "cases": 1,
+        "passed": 1,
+        "pass_rate": 1.0,
+        "negative_trials": 0,
+        "negative_pass_rate": null,
+        "median_turns": 4,
+        "max_turns": 4,
+        "hit_step_cap": 0,
+        "tokens_in": 21000,
+        "tokens_out": 600,
+        "cost_usd": 0.00234,
+        "by_family": {
+          "partly_payable": {
+            "trials": 1,
+            "passed": 1
+          }
+        },
+        "per_case": [
+          {
+            "case_id": "CLM-8842",
+            "trial": 1,
+            "turns": 4,
+            "passed": true,
+            "family": "partly_payable",
+            "negative": false
+          }
+        ],
+        "weak_step_candidates": [
+          [
+            "check_coverage",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "get_claim",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "get_preauthorisation",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "issue_decision_letter",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "lookup_hospital",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "lookup_policy",
+            0,
+            1,
+            0.0
+          ]
+        ]
+      },
+      "after_set": {
+        "trials": 1,
+        "cases": 1,
+        "passed": 1,
+        "pass_rate": 1.0,
+        "negative_trials": 0,
+        "negative_pass_rate": null,
+        "median_turns": 6,
+        "max_turns": 6,
+        "hit_step_cap": 0,
+        "tokens_in": 37800,
+        "tokens_out": 840,
+        "cost_usd": 0.004116,
+        "by_family": {
+          "partly_payable": {
+            "trials": 1,
+            "passed": 1
+          }
+        },
+        "per_case": [
+          {
+            "case_id": "CLM-8842",
+            "trial": 1,
+            "turns": 6,
+            "passed": true,
+            "family": "partly_payable",
+            "negative": false
+          }
+        ],
+        "weak_step_candidates": [
+          [
+            "check_coverage",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "get_claim",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "get_preauthorisation",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "issue_decision_letter",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "lookup_hospital",
+            0,
+            1,
+            0.0
+          ],
+          [
+            "lookup_policy",
+            0,
+            1,
+            0.0
+          ]
+        ]
+      },
+      "restored": true,
+      "restored_detail": "identical before and after the deletion was reversed"
+    },
+    "failure_2": null
+  }
+}

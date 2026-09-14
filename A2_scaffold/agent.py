@@ -101,7 +101,7 @@ def run_case(case_id, problem=None, approve=None, verbose=False):
 
             # Only calls INDEPENDENT of each other belong in one turn.
             # A dependency chain cannot be shortened by running things at
-            # once - that is why Problem B saves less than Problem A.
+            # once - the pre-authorisation lookup has to wait for coverage.
             calls = move.get("calls") or [(move["tool"], move["args"])]
             observations = []
 

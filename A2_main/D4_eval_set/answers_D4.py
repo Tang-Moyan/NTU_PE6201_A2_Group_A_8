@@ -1,0 +1,176 @@
+"""
+D4 - USER WORK FILE  ("The evaluation set")
+=====================================================================
+30-50 个 case，其中 6-10 个 negative。shipped 数据给了 15 个，
+所以你们要写大约 25 个。6-7 人的团队，每人 5-8 个。
+
+**一条铁律：只加新 id，绝不编辑或删除 shipped 行。**
+check_my_data.py 存了每一行 shipped 数据的指纹，改了会被抓出来。
+
+写标签的顺序也是铁律：
+  "Write the label from the routing table in Appendix A, BEFORE you run
+   the agent. A key written from your agent's output measures nothing -
+   it agrees with itself by construction."
+
+进度自查：  python A2_main/D4_eval_set/test_D4.py
+同步数据：  python A2_main/D4_eval_set/sync_fixtures.py          (预览)
+            python A2_main/D4_eval_set/sync_fixtures.py --write  (写入)
+=====================================================================
+"""
+from common.template import TEMPLATE
+
+# =====================================================================
+# 新增的 fixture 行
+# =====================================================================
+# 这些会被 sync_fixtures.py 写进 A2_main/data/make_fixtures_A.py
+# 底部的 EXTRA_* 列表里，然后重新生成 data_A/。
+#
+# id 规范（用明显是你们的号段）：
+#   claims     CLM-9001 起
+#   members    M-7001 起
+#   policies   POL-8001 起
+#   procedures 你们自己编，但别和 shipped 的 10 个撞
+#
+# 大部分 case 只需要一个新 claim。但有些 case **无法只靠 claim 造出来**，
+# 因为让它有意思的那个事实住在支撑表里：
+#   第二个 duplicate    -> EXTRA_DECIDED + 一个匹配的 claim
+#   不同的 exclusion    -> EXTRA_POLICIES(新 policy_id) + EXTRA_MEMBERS
+#   第二个 lapsed       -> EXTRA_POLICIES + EXTRA_MEMBERS
+#   新的 preauth 场景   -> EXTRA_PREAUTHORISATIONS
+#   自定义文档规则      -> EXTRA_REQUIRED_DOCS
+#   自己的 procedure    -> EXTRA_PROCEDURES（requires_preauth 由你们定，
+#                          这个 flag 驱动整个循环）
+
+EXTRA_PROCEDURES = [
+    # {"code": "51798", "description": "...", "requires_preauth": True},
+]
+
+EXTRA_HOSPITALS = [
+    # {"hospital_id": "H-901", "name": "...", "panel": False, "country": "SG"},
+]
+
+EXTRA_POLICIES = [
+    # {"policy_id": "POL-8001", "product": "...", "status": "active",
+    #  "start_date": "2026-01-01", "end_date": "2026-12-31",
+    #  "annual_limit": 10000, "used_to_date": 0,
+    #  "exclusions": [{"code": "31255", "rule": "EX-22 ..."}]},
+]
+
+EXTRA_MEMBERS = [
+    # {"member_id": "M-7001", "name": "...", "policy_id": "POL-8001",
+    #  "join_date": "2025-01-01"},
+]
+
+EXTRA_PREAUTHORISATIONS = [
+    # {"preauth_id": "PA-9001", "member_id": "M-7001",
+    #  "procedure_code": "62480", "valid_from": "...", "valid_to": "..."},
+]
+
+EXTRA_CLAIMS = [
+    # {"claim_id": "CLM-9001", "member_id": "M-2214", "hospital_id": "H-114",
+    #  "date_of_service": "2026-09-20",
+    #  "narrative": "...",
+    #  "documents": ["itemised_bill"],
+    #  "lines": [{"code": "47120", "amount": 1400}]},
+]
+
+EXTRA_DECIDED = [
+    # {"claim_id": "CLM-8790", "member_id": "M-7001", "hospital_id": "H-114",
+    #  "date_of_service": "...", "lines": [...],
+    #  "decision": "approve_in_principle", "decided_on": "..."},
+]
+
+EXTRA_REQUIRED_DOCS = {
+    # "51798": "operative_report",
+}
+
+
+# =====================================================================
+# 新增的标签（答案键）
+# =====================================================================
+# 每个新 claim 一行，字段和 expected_outcomes_A.json 完全一致：
+#
+#   case_id            必填，对应 claim_id
+#   expected_decision  必填，三选一：
+#                        approve_in_principle · request_document · escalate
+#   trigger            **escalate 必填**，且只能有一个
+#   missing            **request_document 必填**，要具体到
+#                        "pre-authorisation reference for 62480, valid on
+#                         2026-09-02"，不能是 "more information"
+#   family             这个 case 演练哪一个 negative family
+#   must_record        满分决策记录除了 decision 之外还要带什么（英文列表）
+#   note               这个 case 为什么在这里
+#
+# 从 Appendix A 的 routing table 写，**在跑 agent 之前写**。
+EXTRA_LABELS = [
+    # {"case_id": "CLM-9001",
+    #  "expected_decision": "approve_in_principle",
+    #  "family": "...",
+    #  "must_record": ["..."],
+    #  "note": "..."},
+]
+
+
+# =====================================================================
+# 评估策略
+# =====================================================================
+
+TRIALS_ORDINARY = TEMPLATE(
+    "普通 case 跑几次？brief 说 ordinary cases get ONE trial。", example=1)
+
+TRIALS_NEGATIVE = TEMPLATE(
+    "negative case 跑几次？brief 说 THREE —— negative 是会在多次运行之间"
+    "翻转的那些，一次 trial 分不出真正的拒绝和运气好的拒绝。", example=3)
+
+# 混合评分器：能诚实自动化的就自动化，不能的就人工/模型判断。
+# "A substring check that passes for the wrong reason is a real failure
+#  mode, and Class 4 showed you one."
+AUTO_GRADED_FIELDS = TEMPLATE(
+    "哪些字段用自动检查？scaffold 默认比对 decision 和 trigger。",
+    example=["decision", "trigger"])
+
+JUDGEMENT_GRADER = TEMPLATE(
+    "must_record 那些英文条目由谁裁定？'person: 姓名' 或 'model: 模型名'。"
+    "**如果用模型，必须在报告里说明** —— a model grading a model is a claim "
+    "that needs defending.",
+    example="person: rotating, one reviewer per batch of 10, named in "
+            "output/D4_judgement.json")
+
+WHY_NOT_SUBSTRING = TEMPLATE(
+    "为什么 must_record 不能用子串匹配？一句话。",
+    example="'approved_total 2180' would pass on a record that printed the "
+            "number inside a sentence saying the opposite.")
+
+
+# =====================================================================
+# Negative case 的账本
+# =====================================================================
+# floor 是 2，一个这个规模的集合应该带 6-10 个。
+# 每个 negative 都要 name the wrong behaviour it exists to catch。
+#
+# **最值钱的一条**：a negative case that ACTUALLY FIRED during your
+# development, and changed something, earns explicit credit.
+NEGATIVE_CASES_THAT_FIRED = TEMPLATE(
+    "开发过程中真的抓到东西、并且让你们改了代码的 negative case。"
+    "写 [{'case_id','what_it_caught','what_changed'}]。一个都没有就填 []，"
+    "但那通常说明你们的 negative 还不够狠。",
+    example=[{"case_id": "CLM-8894",
+              "what_it_caught": "We treated an expired pre-authorisation as "
+                                "'no authorisation', and declined instead of "
+                                "asking.",
+              "what_changed": "get_preauthorisation's failure field now says "
+                              "None means the evidence is missing, not that "
+                              "the line is uncovered."}])
+
+COVERAGE_PLAN = TEMPLATE(
+    "覆盖计划：你们的 30-50 个 case 怎么分布到各个 negative family？"
+    "Problem A 的 family 清单在 problem statement 里："
+    "policy lapsed/outside dates · one line excluded · preauth absent · "
+    "preauth expired · annual limit exceeded · duplicate · "
+    "instruction in narrative。"
+    "写 {family: 数量}。",
+    example={"partly_payable": 6, "preauth_absent": 3, "preauth_expired": 3,
+             "policy_lapsed": 2, "outside_policy_dates": 2,
+             "annual_limit_exceeded": 3, "duplicate_of_decided_claim": 3,
+             "prompt_injection": 4, "ordinary_short_run": 8,
+             "ordinary_long_run": 6})

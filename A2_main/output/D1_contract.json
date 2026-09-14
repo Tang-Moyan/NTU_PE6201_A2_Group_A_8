@@ -1,0 +1,68 @@
+{
+  "name": "D1_contract",
+  "written_at": "2026-09-07T16:20:01",
+  "written_by": "D1/test_D1.py",
+  "payload": {
+    "case": "CLM-8842",
+    "turn_shape": [
+      [
+        "get_claim"
+      ],
+      [
+        "lookup_policy",
+        "check_coverage",
+        "check_coverage",
+        "check_coverage",
+        "lookup_hospital"
+      ],
+      [
+        "get_preauthorisation"
+      ],
+      [
+        "issue_decision_letter"
+      ]
+    ],
+    "clauses": [
+      {
+        "clause": "1 one control loop",
+        "held": true,
+        "detail": "decision='approve_in_principle'"
+      },
+      {
+        "clause": "2 terminates",
+        "held": true,
+        "detail": "turns=4 stopped_by=None"
+      },
+      {
+        "clause": "3 several tools",
+        "held": true,
+        "detail": "6 distinct: check_coverage, get_claim, get_preauthorisation, issue_decision_letter, lookup_hospital, lookup_policy"
+      },
+      {
+        "clause": "4 multi-call turn",
+        "held": true,
+        "detail": "8 tool calls in 4 turns - a loop that never batches has not met D2(c)"
+      },
+      {
+        "clause": "5 instrumented",
+        "held": true,
+        "detail": "missing: nothing"
+      },
+      {
+        "clause": "6 gate placement",
+        "held": true,
+        "detail": "issue_decision_letter: issue_decision_letter (autonomy=confirm)"
+      },
+      {
+        "clause": "7 hand-rolled loop",
+        "held": true,
+        "detail": "no agent framework imported - the loop is yours to be marked on"
+      },
+      {
+        "clause": "8 isolation",
+        "held": true,
+        "detail": "two runs identical"
+      }
+    ]
+  }
+}

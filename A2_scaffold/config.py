@@ -35,9 +35,11 @@ BASE_URL = "https://openrouter.ai/api/v1"
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
 # ─────────────────────────────────────────────────────────────────────
-# WHICH PROBLEM. "A" = claims first response, "B" = referral coordination.
+# WHICH PROBLEM. This repository does Problem A - health-insurance claim
+# first response. Problem B has been stripped out of the scaffold and the
+# reference data, so this string is fixed.
 # ─────────────────────────────────────────────────────────────────────
-PROBLEM = "B"
+PROBLEM = "A"
 
 # ─────────────────────────────────────────────────────────────────────
 # GUARDRAIL LIMITS (D3a). These are the code layer. Set them from
@@ -71,19 +73,18 @@ _CANDIDATES = [
 
 
 def data_root():
-    """Find the folder that holds data_A/ and data_B/.
+    """Find the folder that holds data_A/.
 
     Fails LOUDLY with instructions rather than returning something wrong.
     A silent wrong path here is exactly the failure the data guide warns
     about: your tools return nothing and the run still looks fine.
     """
     for c in _CANDIDATES:
-        if c and os.path.isdir(os.path.join(c, "data_A")) \
-             and os.path.isdir(os.path.join(c, "data_B")):
+        if c and os.path.isdir(os.path.join(c, "data_A")):
             return os.path.abspath(c)
     raise SystemExit(
         "\n  Could not find the reference data.\n"
-        "  I looked for a folder containing BOTH data_A/ and data_B/ in:\n"
+        "  I looked for a folder containing data_A/ in:\n"
         + "".join("    %s\n" % os.path.abspath(c) for c in _CANDIDATES if c)
         + "\n  Fix it either way:\n"
         "    1. put A2_reference_data/ next to this scaffold folder, or\n"
@@ -102,11 +103,11 @@ PRICE_OUT = 0.40
 def _stale_bytecode_warning():
     """Detect Python reusing an out-of-date __pycache__ copy of THIS file.
 
-    WHY THIS EXISTS. Changing PROBLEM = "B" to "A" edits one character and
-    leaves the file the SAME SIZE. If the edit lands in the same second as
-    the last run, Python's staleness check - (source mtime, source size) -
-    sees no change and silently reuses the compiled copy. You edit the
-    file, run it, and get the OLD value with no error at all.
+    WHY THIS EXISTS. Changing AUTONOMY = "confirm" to "suggest" leaves the
+    file the SAME SIZE. If the edit lands in the same second as the last
+    run, Python's staleness check - (source mtime, source size) - sees no
+    change and silently reuses the compiled copy. You edit the file, run
+    it, and get the OLD value with no error at all.
 
     That happened during development of this scaffold, so it will happen
     to you. It is also a small lesson in its own right: the most expensive
@@ -120,7 +121,7 @@ def _stale_bytecode_warning():
     except OSError:
         return ""
     out = []
-    for name, live in (("PROBLEM", PROBLEM), ("BACKEND", BACKEND)):
+    for name, live in (("BACKEND", BACKEND), ("AUTONOMY", AUTONOMY)):
         m = re.search(r'^%s\s*=\s*"([^"]*)"' % name, src, re.M)
         if m and m.group(1) != live:
             out.append("%s is %r in config.py but %r in memory"

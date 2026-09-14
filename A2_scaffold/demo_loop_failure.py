@@ -34,8 +34,8 @@ import config
 from agent import run_case
 from guardrails import Guardrails
 
-# Works for either problem. The default follows config.PROBLEM.
-CASES = {"B": "REF-5602", "A": "CLM-8842"}
+# The default case, keyed by config.PROBLEM.
+CASES = {"A": "CLM-8842"}
 
 
 def _looping_script(CASE):

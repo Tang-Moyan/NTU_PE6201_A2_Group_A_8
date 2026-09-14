@@ -12,15 +12,15 @@ that looks perfectly sound and returns nothing.
 
 ```
 make_fixtures_A.py        generator · Problem A  →  writes data_A/
-make_fixtures_B.py        generator · Problem B  →  writes data_B/
 check_my_data.py          RUN THIS AFTER EVERY CHANGE - catches broken data
 
 data_A/                   8 files · health-insurance claim first response
-data_B/                   7 files · outpatient referral coordination
 expected_outcomes_A.json  15 labelled cases · Problem A
-expected_outcomes_B.json  15 labelled cases · Problem B
 data_dictionary.json      every field, its type and what it means - machine-readable
 ```
+
+**This repository does Problem A only.** Problem B's data, generator and answer key
+have been removed, and every path below is the Problem A one.
 
 **On `data_dictionary.json`.** The field descriptions in this README are also written to
 that file, so you can load them rather than read them. They are kept *beside* the data and
@@ -34,12 +34,11 @@ add your own records, which you will have to do.
 
 ```bash
 python3 make_fixtures_A.py       # rewrites data_A/
-python3 make_fixtures_B.py       # rewrites data_B/
 python3 check_my_data.py         # checks your data still hangs together
 ```
 
-**There are only three scripts, and only two of them write anything.** The answer keys
-are yours to edit by hand — nothing regenerates them, so nothing can overwrite the
+**There are only two scripts, and only one of them writes anything.** The answer key
+is yours to edit by hand — nothing regenerates it, so nothing can overwrite the
 labels you add.
 
 No arguments, no packages to install, no network. Standard library only.
@@ -48,8 +47,8 @@ No arguments, no packages to install, no network. Standard library only.
 
 ## Two kinds of file, and everything follows from the difference
 
-**The work queue** — `claims.json` and `referrals.json`. **One row is one agent run.**
-Your harness loops over these. The shape of a row is what makes the number of turns vary:
+**The work queue** — `claims.json`. **One row is one agent run.**
+Your harness loops over it. The shape of a row is what makes the number of turns vary:
 a claim with one line item is a short run, a claim with four lines and a pre-authorisation
 to chase is a long one.
 
@@ -70,7 +69,7 @@ objects with those keys.
 
 <!-- BEGIN GENERATED: field tables · make_data_dictionary.py -->
 
-### Problem A · health-insurance claim first response
+### `data_A/` · health-insurance claim first response
 
 #### `claims.json` — 15 rows
 
@@ -168,85 +167,6 @@ History — claims already dealt with, and the only way to recognise a resubmiss
 | `decision` | str | What was decided the first time round. | `"approve_in_principle"` |
 | `decided_on` | str | When it was decided. | `"2026-08-22"` |
 
-### Problem B · outpatient referral coordination
-
-#### `referrals.json` — 15 rows
-
-**The work queue. One row = one agent run.** A GP has referred a patient to a hospital specialty. The row carries the patient, the specialty, the date, the tests attached and the GP's free-text clinical summary — and that prose, not any id, is what decides how urgent this is and whether it is safe to book at all.
-
-| field | type | what it means | example |
-|---|---|---|---|
-| `referral_id` | str | Unique id for this referral. | `"REF-5590"` |
-| `patient_id` | str | Who is being referred. Joins to **both** `patients.json` and `contacts.json` — they share this key. | `"P-1192"` |
-| `referring_clinic` | str | Which GP practice sent it. Context for the record; carries no rule. | `"Bedok Family Practice"` |
-| `specialty` | str | Which department it was sent to, as a code. Joins to `specialties.json`, and is half the key into `clinic_slots.json`. | `"OPH"` |
-| `date_received` | str | When the referral arrived. **Windows are counted from `as_of.json`, not from this field** — a common and silent mistake. | `"2026-09-08"` |
-| `clinical_summary` | str | **The GP's free text, and the most important field in Problem B.** Two decisions come out of it and out of nothing else: whether a red-flag term appears, and which urgency band applies. It is also written by someone outside your organisation, so it is untrusted input. | `"Sudden visual loss in the right eye on wak…` |
-| `tests_attached` | list[str] | Test codes actually attached. Compare against the specialty's `mandatory_tests`; anything missing makes this a request, not a booking. | `["VF-01"]` |
-| `tests_attached_on` | str · **optional** (12 of 15 rows) | When the tests were done. **Absent on some rows** — absence means no test was attached, so your loader must not assume the key exists. | `"2026-09-05"` |
-
-#### `specialties.json` — 5 rows
-
-**The department's protocol, expressed as data.** For each specialty: which tests must be attached before anyone books, which phrases mean stop and escalate, and which body words indicate the referral was sent to the right department. You are automating this protocol, not rewriting it.
-
-| field | type | what it means | example |
-|---|---|---|---|
-| `code` | str | The specialty code a referral names. | `"OPH"` |
-| `name` | str | Full department name, for the record. | `"Ophthalmology"` |
-| `mandatory_tests` | list[{code, name}] | Tests that must be attached before a booking is allowed, each with a `code` and a readable `name`. Missing one ends the run as a request for information. | `[{"code": "VF-01", "name": "visual field te…` |
-| `red_flag_terms` | list[str] | Phrases that mean **stop and escalate immediately**. Checked against `clinical_summary`. A red flag outranks everything else, including an available slot. | `["sudden visual loss", "flashes and floater…` |
-| `treats` | list[str] | Body words this department handles. Used to tell whether a referral reached the right department at all. | `["eye", "vision", "visual", "retina", "cata…` |
-
-#### `urgency_bands.json` — 3 rows
-
-How soon the patient must be seen, and the phrases that put them in each band. Three bands: urgent (2 weeks), soon (4), routine (8). The window is counted from `as_of.json`, not from the referral date.
-
-| field | type | what it means | example |
-|---|---|---|---|
-| `band` | str | `urgent`, `soon` or `routine`. Also half the key into `clinic_slots.json`. | `"urgent"` |
-| `window_weeks` | int | How many weeks from `as_of` the appointment must fall inside. Urgent 2, soon 4, routine 8. | `2` |
-| `trigger_terms` | list[str] | Phrases in `clinical_summary` that put a referral in this band. No trigger found means the routine band. | `["worsening over days", "rapidly worsening"…` |
-
-#### `clinic_slots.json` — 22 rows
-
-Every appointment slot that exists, per clinic, per band, with what is left. `capacity_remaining: 0` means the slot exists and is **full** — that is a different fact from the slot not existing, and your agent must not confuse them.
-
-| field | type | what it means | example |
-|---|---|---|---|
-| `clinic` | str | The clinic offering the slot. Record this on a booking. | `"OPH-C1"` |
-| `specialty` | str | Which department the slot belongs to. Half the lookup key. | `"OPH"` |
-| `band` | str | Which urgency band the slot serves. The other half. **A routine slot cannot take an urgent referral**, even if the date fits. | `"urgent"` |
-| `date` | str | Slot date. Must fall inside the window measured from `as_of`. | `"2026-09-15"` |
-| `time` | str | Slot time. Record it on a booking. | `"09:40"` |
-| `capacity_remaining` | int | Places left. **`0` means full, not missing** — the slot exists and cannot be booked. Take the first slot with a value above zero. | `1` |
-
-#### `patients.json` — 7 rows
-
-Who the patient is and what they already have booked. `existing_appointments` is how a duplicate referral is caught — but only a *future* appointment in the *same* specialty counts.
-
-| field | type | what it means | example |
-|---|---|---|---|
-| `patient_id` | str | The id a referral points at. | `"P-1180"` |
-| `date_of_birth` | str | For the record. No rule depends on it. | `"1968-03-14"` |
-| `existing_appointments` | list[{specialty, clinic, date}] | What this patient already has booked, each with `specialty`, `clinic` and `date`. **A duplicate needs both: the same specialty AND a date in the future.** A past appointment in the same specialty is not a duplicate. An empty list is normal. | `[{"specialty": "ORT", "clinic": "ORT-C1", "…` |
-
-#### `contacts.json` — 7 rows
-
-How the department would write back — one preferred channel per patient. Reached directly from the referral's `patient_id`; it is not a hop through `patients`. Values are masked, as real contact details would be.
-
-| field | type | what it means | example |
-|---|---|---|---|
-| `patient_id` | str | The id a referral points at — the same key as `patients.json`, reached directly from the referral. | `"P-1180"` |
-| `method` | str | Preferred channel: `sms`, `phone` or `email`. Record which one you would use. | `"sms"` |
-| `value` | str | The masked address or number. Masked deliberately; you are recording an intent to contact, not sending anything. | `"+65 8••• ••21"` |
-
-#### `as_of.json` — single object
-
-**The clock.** A single date. Every urgency window in Problem B is measured from it, so it decides which slots are legal for every case. Change it and the answer key stops being true.
-
-| field | type | what it means | example |
-|---|---|---|---|
-| `as_of` | str | **Today, for Problem B.** Every urgency window is counted forward from this date. | `"2026-09-09"` |
 <!-- END GENERATED -->
 
 ---
@@ -258,7 +178,7 @@ follows them. This is the part worth reading twice.
 
 ### First, the notation
 
-The maps below use one piece of shorthand. `lines[].code` means:
+The map below uses one piece of shorthand. `lines[].code` means:
 
 > take the `lines` list on this row, and for **every object in it**, read its `code` field.
 
@@ -279,9 +199,7 @@ have two to four), why an agent that checks only the first line quietly approves
 should refuse — and why Problem A has something to parallelise at all: those *n* lookups
 do not depend on each other, so they can go in one turn.
 
-`existing_appointments[].specialty` in Problem B reads the same way.
-
-### Problem A
+### The map
 
 ```
     claims.json                      ← the queue: one claim per run
@@ -338,100 +256,27 @@ So an agent that matches on the date alone, or on member and date, or on member,
 hospital and date — **wrongly escalates a claim that is perfectly fine**. Only the full
 comparison, lines included, gets all fifteen right.
 
-### Problem B
-
-Problem B has **no `lines[]`** — a referral is one patient, one specialty, one decision,
-so nothing here fires once per line. What it has instead is a **chain of gates**, and
-each one can end the run. The `ONLY IF` markers below are the equivalent of Problem A's
-branch, and there are four of them rather than one.
-
-```
-    referrals.json                   ← the queue: one referral per run
-        │
-        ├─ specialty ──────────────→ specialties.json        mandatory_tests[]
-        │                                                    red_flag_terms[]
-        │                                                    treats[]
-        │
-        │   ── GATE 1 ───────────────────────────────────────────────────────
-        ├─ clinical_summary ──────→ specialties.red_flag_terms
-        │       (free text)                    a term matches?  ESCALATE, STOP
-        │
-        │   ── GATE 2 ──── ONLY IF no red flag ──────────────────────────────
-        ├─ clinical_summary ──────→ specialties.treats
-        │       (free text)                    wrong department?  ESCALATE, STOP
-        │
-        │   ── GATE 3 ──── ONLY IF the department is right ───────────────────
-        ├─ tests_attached ────────→ specialties.mandatory_tests
-        │                                      one missing?  REQUEST INFO, STOP
-        │
-        │   ── GATE 4 ──── ONLY IF every mandatory test is attached ──────────
-        ├─ patient_id ────────────→ patients.json            existing_appointments[]
-        │                                      same specialty AND in the future?
-        │                                                     ESCALATE, STOP
-        │                                      in the past = NOT a duplicate
-        │
-        │   ── ONLY IF all four gates pass do you ever look at a slot ────────
-        ├─ clinical_summary ──────→ urgency_bands.trigger_terms  → window_weeks
-        │       (free text)                    no trigger = routine
-        │
-        ├─ specialty + band ──────→ clinic_slots.json        first slot with
-        │                                                     capacity_remaining > 0
-        │                                                     inside the window;
-        │                                                     none?  ESCALATE
-        │
-        └─ patient_id ────────────→ contacts.json            how you would write back
-                                                   (direct from the referral — the same
-                                                    key as patients.json, not a hop
-                                                    through it)
-```
-
-**Notice what the free text does.** Three of those hops are decided by prose a general
-practitioner typed, not by an id: the red flag, the department check and the urgency
-band all come out of `clinical_summary`. That is where this problem is hard, and it is
-why your negative cases matter more here than in Problem A.
-
-**Notice the order, because it is the whole difference between the two problems.** In
-Problem A the branch is *how many* calls to make — the run gets longer or shorter but it
-always reaches a decision. In Problem B the branches are *whether to continue at all*.
-An early exit is correct behaviour, not a truncated run, and an agent that queries a slot
-after finding a red flag has failed the case even if it never books.
-
-**And notice the last arrow.** `contacts.json` is reached straight from the referral's
-`patient_id`. It is not read through `patients.json`; both files simply key on the same
-id. Reading it as a two-hop chain makes the run one turn longer than it needs to be.
-
-### The clock — Problem B only
-
-`data_B/as_of.json` holds **2026-09-09**. Every window is measured from it: a referral
-received on that date in the urgent band may be booked up to 2026-09-23, and no later.
-Move the clock and every window moves with it, and the answer key stops being true.
-Leave it alone until you understand what it controls.
-
 Problem A's dates are absolute and need no clock.
 
 ---
 
-## The answer keys
+## The answer key
 
-**There is one for each problem, and they are equals.** `expected_outcomes_A.json` labels
-all 15 claims; `expected_outcomes_B.json` labels all 15 referrals. Same shape, same rules,
-written at the same time — if you chose Problem A, your key is `_A`.
+**There is one, and it is `expected_outcomes_A.json`.** It labels **every record in the
+starting set** — all 15 claims — with the outcome the routing table in Appendix A
+requires, and the single trigger that produces it.
 
-Each labels **every record in the starting set** with the outcome the routing table in
-Appendix A requires, and the single trigger that produces it.
+| field | what it is |
+|---|---|
+| `case_id` | joins to `claim_id` |
+| `expected_decision` | the outcome: `approve_in_principle` · `request_document` · `escalate` |
+| `trigger` | escalations only — the **one** reason |
+| `missing` | requests only — the **one** named thing |
+| `family` | which negative-case family this record exercises |
+| `must_record` | what a full-marks decision record carries for this case, beyond the decision |
+| `note` | why the case is here |
 
-| field | in | what it is |
-|---|---|---|
-| `case_id` | both | joins to `claim_id` (A) / `referral_id` (B) |
-| `expected_decision` | both | the outcome. **A:** `approve_in_principle` · `request_document` · `escalate`. **B:** `book` · `request_information` · `escalate` |
-| `trigger` | both | escalations only — the **one** reason |
-| `missing` | both | requests only — the **one** named thing |
-| `booked` | **B only** | bookings only — clinic, date, time. Problem A never books anything, so this field does not appear in `_A` |
-| `family` | both | which negative-case family this record exercises |
-| `must_record` | both | what a full-marks decision record carries for this case, beyond the decision |
-| `note` | both | why the case is here |
-
-One row from each, so you can see they are the same thing:
+One row, so you can see the shape:
 
 ```json
 // expected_outcomes_A.json — a claim that is partly payable
@@ -442,15 +287,6 @@ One row from each, so you can see they are the same thing:
                   "31255 refused under EX-14 cosmetic dermatology",
                   "PA-5521 cited for line 62480",
                   "approved_total 2180", "refused_total 300"] }
-
-// expected_outcomes_B.json — a referral that must not be booked
-{ "case_id": "REF-5590",
-  "expected_decision": "escalate",
-  "trigger": "red_flag_term",
-  "family": "red_flag",
-  "must_record": ["the red-flag term \"sudden visual loss\"",
-                  "escalate_to triage nurse",
-                  "that an urgent slot on 2026-09-15 existed and was NOT taken"] }
 ```
 
 **How to use it.** Join on `case_id`, compare your agent's decision, then compare the
@@ -481,10 +317,10 @@ You will have to. D4 wants **30–50 cases with 6–10 negatives**, and 15 are s
 are writing roughly 25 more.
 
 > **The full guide is a separate document: `PE6201_A2_Adding_Extra_Cases.pdf`, on
-> NTULearn.** It has the coverage plan for a 40-case set, two fully worked examples you can
-> copy — a second duplicate claim for Problem A and a duplicate-appointment referral for
-> Problem B — and the rules about writing labels. What follows here is the quick
-> reference; the PDF is the authority.
+> NTULearn.** It has the coverage plan for a 40-case set, a fully worked example you can
+> copy — a second duplicate claim — and the rules about writing labels. What follows here
+> is the quick reference; the PDF is the authority. (The PDF also covers Problem B, which
+> this repository does not do; ignore those pages.)
 
 ### The rule
 
@@ -497,21 +333,21 @@ written against them. Within that rule you may add to **any** table, not only th
 
 You never edit a JSON file by hand. You edit one Python file, in one place, and re-run it.
 
-| | Problem A | Problem B |
-|---|---|---|
-| **Open** | `make_fixtures_A.py` | `make_fixtures_B.py` |
-| **Search for** | `EXTRA_PROCEDURES` | `EXTRA_SPECIALTIES` |
-| **You land** | ~40 lines from the bottom | ~35 lines from the bottom |
+| | Problem A |
+|---|---|
+| **Open** | `make_fixtures_A.py` |
+| **Search for** | `EXTRA_PROCEDURES` |
+| **You land** | ~40 lines from the bottom |
 
 That block of empty lists is the **only** part of the file you touch — the comment beside
 each list is the shape of one row. Everything above it is shipped data.
 
 Use ids that are obviously yours: claims from `CLM-9001`, members `M-7001`, policies
-`POL-8001`, referrals `REF-6001`, patients `P-2001`.
+`POL-8001`.
 
 ### The answer key grows — and you write it by hand
 
-There is **one** answer key per problem and it is the same file throughout.
+There is **one** answer key and it is the same file throughout.
 `expected_outcomes_A.json` starts as 15 rows and ends as however many your set holds: our
 15, whose labels you must not change, plus one row per case you write. Your harness joins
 on `case_id` and does not care which is which.
@@ -529,10 +365,10 @@ the difference.
 ### The loop
 
 ```bash
-# 1 · edit the EXTRA_* lists near the bottom of make_fixtures_A.py / _B.py
+# 1 · edit the EXTRA_* lists near the bottom of make_fixtures_A.py
 python3 make_fixtures_A.py        # 2 · regenerate
 python3 check_my_data.py          # 3 · names anything broken or unlabelled
-# 4 · add the label to expected_outcomes_A.json / _B.json  <- BY HAND
+# 4 · add the label to expected_outcomes_A.json  <- BY HAND
 python3 check_my_data.py          # 5 · "Your data hangs together."
 ```
 

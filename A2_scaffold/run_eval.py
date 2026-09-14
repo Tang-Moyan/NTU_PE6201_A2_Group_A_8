@@ -3,7 +3,7 @@
 PE6201 · A2 scaffold — ENTRY POINT
 ====================================================================
     python3 run_eval.py              run every SCRIPTED case
-    python3 run_eval.py REF-5602     run one case, showing every turn
+    python3 run_eval.py CLM-8842     run one case, showing every turn
     python3 run_eval.py --all        run every case in the work queue
     python3 run_eval.py --prompt     print what the model is told, and stop
 

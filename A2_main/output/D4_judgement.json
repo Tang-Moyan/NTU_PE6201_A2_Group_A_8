@@ -1,0 +1,21 @@
+{
+  "name": "D4_judgement",
+  "written_at": "2026-09-07T16:19:46",
+  "written_by": "D4/eval_runner.py",
+  "payload": [
+    {
+      "case_id": "CLM-8842",
+      "decision": "approve_in_principle",
+      "reason": "3 lines. 47120 covered (1400). 62480 covered, PA-5521 cited, valid on 2026-09-02 (780). 31255 refused under EX-14 cosmetic dermatology (300). approved_total 2180, refused_total 300. H-114 is on panel.",
+      "must_record": [
+        "a disposition for all 3 lines",
+        "31255 refused under EX-14 cosmetic dermatology",
+        "PA-5521 cited for line 62480",
+        "approved_total 2180",
+        "refused_total 300"
+      ],
+      "verdict": null,
+      "graded_by": null
+    }
+  ]
+}

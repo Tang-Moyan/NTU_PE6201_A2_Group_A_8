@@ -44,51 +44,7 @@ import config
 SCRIPTS = {
 
     # ---------------------------------------------------------------
-    # PROBLEM B · REF-5602 - the booking from Appendix A.
-    # Six tool calls. Turns 2 and 3 each fire two calls at once, so the
-    # run is FOUR turns rather than six. See D2(c) in the brief.
-    # ---------------------------------------------------------------
-    "REF-5602": [
-        {"thought": "I have a referral id and nothing else. Fetch the record.",
-         "calls": [("get_referral", {"referral_id": "REF-5602"})]},
-
-        {"thought": "Two things I need next do not depend on each other: "
-                    "the specialty's rules, and whether this patient already "
-                    "has an appointment. Fire both together.",
-         "calls": [("check_referral_criteria", {"specialty": "OPH",
-                                                "referral_id": "REF-5602"}),
-                   ("lookup_patient", {"patient_id": "P-1180"})]},
-
-        {"thought": "No red flag, right department, VF-01 attached, no "
-                    "duplicate. Band is routine, so the window runs 8 weeks "
-                    "from as_of 2026-09-09, to 2026-11-04. I will query both "
-                    "halves of that window at once. This is a gamble: if the "
-                    "near half had a slot, the second query was wasted.",
-         "calls": [("get_clinic_slots", {"specialty": "OPH", "band": "routine",
-                                         "from": "2026-09-09", "to": "2026-09-30"}),
-                   ("get_clinic_slots", {"specialty": "OPH", "band": "routine",
-                                         "from": "2026-10-01", "to": "2026-11-04"})]},
-
-        {"thought": "OPH-C2 is full until 14 October. First bookable slot "
-                    "inside the window is 2026-10-14 11:20. Book it - this is "
-                    "the irreversible step, so it goes through the gate.",
-         "calls": [("book_slot", {"clinic": "OPH-C2", "date": "2026-10-14",
-                                  "time": "11:20", "referral_id": "REF-5602"})]},
-
-        {"final": {
-            "decision": "book",
-            "booked": {"clinic": "OPH-C2", "date": "2026-10-14", "time": "11:20"},
-            "reason": "Urgency band routine, so an 8-week window from as_of "
-                      "2026-09-09 closing 2026-11-04; booked at 5 weeks. "
-                      "VF-01 present. No existing OPH appointment for P-1180. "
-                      "OPH-C2 was full until 2026-10-14.",
-         },
-         "thought": "Record the band, the window, the tests and the duplicate "
-                    "check - the answer key asks for all four."},
-    ],
-
-    # ---------------------------------------------------------------
-    # PROBLEM A · CLM-8842 - the partly payable claim from Appendix A.
+    # CLM-8842 - the partly payable claim from Appendix A.
     # Three lines, one of them excluded, one needing a pre-authorisation.
     # ---------------------------------------------------------------
     "CLM-8842": [

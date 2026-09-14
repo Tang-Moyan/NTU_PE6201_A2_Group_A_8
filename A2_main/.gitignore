@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+
+# NOTE: results.json is NOT ignored, on purpose.
+#
+# The scaffold shipped a .gitignore that hid it while its own README
+# asked for it to be committed. A pass rate submitted without the run
+# that produced it is not a measurement, and a marker reads results.json
+# alongside the report - so it belongs in the repository.
+#
+# The same goes for output/*.json: those are the measurements every
+# section of the report quotes. See output/README.md.

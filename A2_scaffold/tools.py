@@ -42,11 +42,9 @@ you wrote - and note the prompt is resent EVERY TURN, so a longer
 descriptor has to earn its length on every turn of every run.
 
 --------------------------------------------------------------------
-POKA-YOKE: make the wrong call impossible rather than documented.
-Two examples below - `get_clinic_slots` demands a band so you cannot
-accidentally book an urgent patient into a routine slot, and
-`check_coverage` demands a policy_id so you cannot check coverage
-against no policy at all.
+POKA-YOKE: make the wrong call impossible rather than documented. The
+example below is `check_coverage`, which demands a policy_id so you
+cannot check coverage against no policy at all.
 ====================================================================
 """
 import json
@@ -81,226 +79,6 @@ def _load(problem, table):
 
 
 # =====================================================================
-# PROBLEM B · outpatient referral coordination
-# =====================================================================
-
-def get_referral(referral_id):
-    """Fetch the one referral the agent has been asked to handle.
-
-    WHAT IT DOES   turns an id into the actual record: patient, specialty,
-                   date, tests attached, and the GP's free-text summary.
-    READS          data_B/referrals.json
-    RETURNS        the referral row, or None
-    RETURNS NONE   when no referral has that id. That is a BROKEN CASE,
-                   not a business outcome - the agent was handed an id
-                   that resolves to nothing. check_my_data.py exists to
-                   catch this before a run ever happens.
-    WATCH OUT      this is almost always turn 1 and it must run ALONE.
-                   Everything else needs the patient_id and specialty it
-                   returns, so nothing can be parallelised with it.
-
-    Note what is NOT in the row it returns: no urgency, no red-flag
-    verdict, no slot, no rule. Every one of those has to be fetched.
-    That is what makes this an agent loop rather than one big call.
-    """
-    for r in _load("B", "referrals"):
-        if r["referral_id"] == referral_id:
-            return r
-    return None
-
-
-def lookup_patient(patient_id):
-    """Who the patient is, what they already have booked, and how to
-    reach them.
-
-    WHAT IT DOES   answers the duplicate question and the contact question
-                   in one call.
-    READS          data_B/patients.json AND data_B/contacts.json
-    RETURNS        {"patient": {...}, "contact": {...}}
-    RETURNS NONE   when the patient_id matches nobody - again a broken
-                   case, not an outcome.
-    WATCH OUT      contacts and patients share the SAME KEY. Reading
-                   contacts "through" patients would be a two-hop chain
-                   and an extra turn for nothing. Both are fetched here
-                   for that reason.
-
-    THE DUPLICATE RULE, because this is where teams lose the case:
-    `patient["existing_appointments"]` is a duplicate only when BOTH are
-    true - the same specialty AND a date in the future, measured from
-    as_of(). A past appointment in the same specialty is NOT a duplicate;
-    the patient was seen and has been referred again. An empty list is
-    normal and means nothing is booked.
-
-    This tool does not decide that for you. It hands you the appointments
-    and the decision is the agent's - which is deliberate, because the
-    decision is what D4 grades.
-    """
-    p = next((x for x in _load("B", "patients")
-              if x["patient_id"] == patient_id), None)
-    if p is None:
-        return None
-    c = next((x for x in _load("B", "contacts")
-              if x["patient_id"] == patient_id), None)
-    return {"patient": p, "contact": c}
-
-
-def check_referral_criteria(specialty, referral_id):
-    """Run the department's protocol against this referral's free text.
-
-    WHAT IT DOES   answers the four questions that can each end the run,
-                   plus the urgency band, in one call.
-    READS          data_B/specialties.json, data_B/urgency_bands.json,
-                   and the referral itself
-    RETURNS        {"red_flag_term":   the matched phrase, or None
-                    "right_department": True/False
-                    "missing_tests":   list of mandatory tests NOT attached
-                    "band":            "urgent" | "soon" | "routine"
-                    "window_weeks":    2 | 4 | 8}
-    RETURNS NONE   when the referral or the specialty does not exist.
-    WATCH OUT      THIS TOOL DECIDES NOTHING. It reports five facts. The
-                   agent decides what they mean, and the ORDER matters:
-
-                       red_flag_term is not None   -> ESCALATE, stop
-                       right_department is False   -> ESCALATE, stop
-                       missing_tests is non-empty  -> REQUEST INFO, stop
-                       otherwise                   -> carry on to slots
-
-                   An agent that queries a slot after finding a red flag
-                   has failed the case even if it never books.
-
-    WHY THIS IS ONE TOOL AND NOT FOUR - a design choice worth arguing
-    with. The four questions are always asked, always in this order, and
-    each can end the run. Splitting them into four tools would invite an
-    agent to ask them out of order or skip one, and would cost three
-    extra turns for no information. The cost is that this tool is doing
-    four things, which is usually bad design.
-    D2(a) marks your REASONING about the tool set, not ours - so if you
-    split it, say why, and you are on perfectly good ground.
-
-    HOW THE THREE TEXT CHECKS WORK, so you can see how crude they are:
-      - red flags   substring match of the specialty's red_flag_terms
-      - department  substring match of the specialty's `treats` words
-      - band        first urgency band whose trigger_terms appear;
-                    NO TRIGGER FOUND MEANS ROUTINE, which is the default
-                    and not an error
-    Substring matching is fragile on purpose. Your prompt-injection
-    cases will attack exactly this, and improving it is fair game - just
-    do not change the PROTOCOL, only how you detect it.
-    """
-    ref = get_referral(referral_id)
-    spec = next((s for s in _load("B", "specialties")
-                 if s["code"] == specialty), None)
-    if ref is None or spec is None:
-        return None
-    text = ref["clinical_summary"].lower()
-
-    red = next((t for t in spec["red_flag_terms"] if t.lower() in text), None)
-    right_department = any(w.lower() in text for w in spec["treats"])
-    attached = set(ref.get("tests_attached", []))
-    missing = [t for t in spec["mandatory_tests"] if t["code"] not in attached]
-
-    band, weeks = "routine", 8            # <- routine is the DEFAULT
-    for b in _load("B", "urgency_bands"):
-        if any(t.lower() in text for t in b["trigger_terms"]):
-            band, weeks = b["band"], b["window_weeks"]
-            break
-
-    return {"red_flag_term": red,
-            "right_department": right_department,
-            "missing_tests": missing,
-            "band": band,
-            "window_weeks": weeks}
-
-
-def get_clinic_slots(specialty, band, **window):
-    """Find appointment slots that exist AND are free AND are legal.
-
-    WHAT IT DOES   three filters at once: right department, right band,
-                   inside the window, with a place left.
-    READS          data_B/clinic_slots.json
-    RETURNS        list of {clinic, specialty, band, date, time,
-                   capacity_remaining} - possibly empty
-    RETURNS EMPTY  when nothing is free in that window. EMPTY IS AN
-                   ANSWER, not a failure: it means ESCALATE with trigger
-                   `no_slot_in_window`. It does NOT mean widen the
-                   window, and it does NOT mean drop to another band.
-    WATCH OUT      capacity_remaining == 0 means the slot EXISTS AND IS
-                   FULL. That is a different fact from the slot not
-                   existing, and this tool filters those rows out for
-                   you - so an empty list can mean either. If your
-                   record needs to distinguish them, read the file.
-
-    POKA-YOKE: `band` IS A REQUIRED ARGUMENT, and this is the clearest
-    example in the scaffold of designing an interface so the wrong call
-    cannot be made.
-
-    On the shipped data, REF-5602 is a routine referral with an 8-week
-    window closing 2026-11-04. THREE slots sit earlier inside that window
-    with capacity free - OPH-C1 on 09-15 and 09-22 (urgent) and OPH-C3 on
-    09-29 (soon). A team filtering by date alone books one of them and
-    fails the case. Only the band excludes them, and making band an
-    argument rather than an optional filter is what makes forgetting it
-    impossible rather than merely documented.
-
-    The window is passed as **kwargs so `from` can be used as a name -
-    it is a Python keyword and cannot be a normal parameter. That is a
-    small ugliness bought deliberately, to keep the domain word.
-    """
-    lo = window.get("from", "0000-00-00")
-    hi = window.get("to", "9999-99-99")
-    return [s for s in _load("B", "clinic_slots")
-            if s["specialty"] == specialty
-            and s["band"] == band
-            and lo <= s["date"] <= hi
-            and s["capacity_remaining"] > 0]
-
-
-def book_slot(clinic, date, time, referral_id):
-    """>>> THE IRREVERSIBLE STEP FOR PROBLEM B <<<
-
-    WHAT IT DOES   commits the appointment. A patient is now expected at
-                   a clinic on a date.
-    READS          nothing - it WRITES, conceptually
-    RETURNS        a confirmation carrying everything the record needs
-    WATCH OUT      this is the ONE call in Problem B that cannot be taken
-                   back. Every other tool can be re-run harmlessly.
-
-    THIS IS WHAT THE AUTONOMY GATE SITS IN FRONT OF - see guardrails.py
-    and the GATED_ACTION table below. Note WHERE the gate goes: in front
-    of THIS ACTION, not in front of the agent as a whole. An agent gated
-    as a whole is not an agent, it is a form, and D3(a) asks you to
-    defend the placement.
-
-    In this scaffold it returns a dict rather than touching anything -
-    there is no real booking system. Your evaluation runs would be
-    unrepeatable if there were, which is worth noticing: an agent that
-    genuinely changes the world is much harder to test, and that is a
-    real cost of autonomy, not a detail of this exercise.
-    """
-    return {"booked": True, "clinic": clinic, "date": date,
-            "time": time, "referral_id": referral_id}
-
-
-def as_of():
-    """The clock for Problem B.
-
-    WHAT IT DOES   returns the single date every urgency window is
-                   measured FROM.
-    READS          data_B/as_of.json
-    RETURNS        a date string, e.g. "2026-09-09"
-    WATCH OUT      windows are counted from THIS, not from the referral's
-                   `date_received`. They happen to be equal for some
-                   shipped referrals, which is exactly the sort of
-                   coincidence that hides a bug until a case where they
-                   differ.
-
-    Move this date and every booking case in the answer key silently
-    becomes wrong. The data guide says leave it alone, and it means it.
-    """
-    return _load("B", "as_of")["as_of"]
-
-
-# =====================================================================
 # PROBLEM A · health-insurance claim first response
 # =====================================================================
 
@@ -320,10 +98,10 @@ def get_claim(claim_id):
                    agent that checks only the first line quietly approves
                    things it should refuse.
 
-    Like get_referral, this must run ALONE on turn 1 - everything after
-    it needs the member, the hospital and the lines it returns. It is
-    also the reason Problem A has anything to parallelise: those per-line
-    checks do not depend on each other, so they fold into one turn.
+    This must run ALONE on turn 1 - everything after it needs the member,
+    the hospital and the lines it returns. It is also the reason Problem A
+    has anything to parallelise: those per-line checks do not depend on
+    each other, so they fold into one turn.
     """
     for c in _load("A", "claims"):
         if c["claim_id"] == claim_id:
@@ -538,14 +316,6 @@ def issue_decision_letter(claim_id, decision, lines_resolved, approved_total,
 # What the agent is allowed to call, per problem. Adding a tool means
 # writing the function, adding it here, and writing its descriptor.
 REGISTRY = {
-    "B": {
-        "get_referral": get_referral,
-        "lookup_patient": lookup_patient,
-        "check_referral_criteria": check_referral_criteria,
-        "get_clinic_slots": get_clinic_slots,
-        "book_slot": book_slot,
-        "as_of": as_of,
-    },
     "A": {
         "get_claim": get_claim,
         "lookup_policy": lookup_policy,
@@ -557,11 +327,11 @@ REGISTRY = {
     },
 }
 
-# THE ONE IRREVERSIBLE ACTION PER PROBLEM. Appendix A fixes this and the
-# answer key is written against it, so it is not yours to change. What IS
-# yours is where you put the gate - and the answer is: in front of this
-# action, not in front of the agent.
-GATED_ACTION = {"B": "book_slot", "A": "issue_decision_letter"}
+# THE ONE IRREVERSIBLE ACTION. Appendix A fixes this and the answer key is
+# written against it, so it is not yours to change. What IS yours is where
+# you put the gate - and the answer is: in front of this action, not in
+# front of the agent.
+GATED_ACTION = {"A": "issue_decision_letter"}
 
 
 # =====================================================================
@@ -572,77 +342,6 @@ GATED_ACTION = {"B": "book_slot", "A": "issue_decision_letter"}
 # YOU read. They overlap, but they are not the same document: a
 # descriptor is written to be acted on, a comment to be understood.
 DESCRIPTORS = {
-    # ---- Problem B -------------------------------------------------
-    "get_referral": {
-        "name": "get_referral",
-        "purpose": "Fetch the referral you have been asked to handle.",
-        "when": "Turn 1, alone. Everything else needs what it returns, so "
-                "nothing can be run alongside it.",
-        "args": {"referral_id": "str, the case id you were given"},
-        "returns": "{referral_id, patient_id, referring_clinic, specialty, "
-                   "date_received, clinical_summary, tests_attached, "
-                   "tests_attached_on (may be absent)}",
-        "failure": "Returns None when no referral has that id. That is a "
-                   "broken case, not an outcome - stop and say so rather "
-                   "than inventing a decision.",
-    },
-    "lookup_patient": {
-        "name": "lookup_patient",
-        "purpose": "The patient's existing appointments and how to contact them.",
-        "when": "Any time after get_referral. Independent of the criteria "
-                "check, so the two can go in one turn.",
-        "args": {"patient_id": "str, from the referral"},
-        "returns": "{patient: {patient_id, date_of_birth, "
-                   "existing_appointments[]}, contact: {method, value}}",
-        "failure": "Returns None when the patient does not exist - a broken "
-                   "case. An EMPTY existing_appointments list is normal and "
-                   "means nothing is booked, which is not the same thing.",
-    },
-    "check_referral_criteria": {
-        "name": "check_referral_criteria",
-        "purpose": "Run the department's protocol against the referral's free "
-                   "text: red flags, right department, mandatory tests, band.",
-        "when": "Immediately after get_referral. Its answers decide whether "
-                "the run continues at all.",
-        "args": {"specialty": "str, the code on the referral",
-                 "referral_id": "str, the case id"},
-        "returns": "{red_flag_term (str or None), right_department (bool), "
-                   "missing_tests (list), band, window_weeks}",
-        "failure": "Returns None when the referral or specialty does not "
-                   "exist. IT DECIDES NOTHING - it reports five facts. Apply "
-                   "them in order: red flag, then wrong department, then "
-                   "missing test, then duplicate. STOP at the first that "
-                   "fires. band 'routine' is the default when no trigger "
-                   "phrase appears; that is normal, not a failure.",
-    },
-    "book_slot": {
-        "name": "book_slot",
-        "purpose": "Commit the appointment. THE IRREVERSIBLE STEP.",
-        "when": "Last, and only when all four checks passed and a legal slot "
-                "was found. Never speculatively.",
-        "args": {"clinic": "str, from the chosen slot",
-                 "date": "str, from the chosen slot",
-                 "time": "str, from the chosen slot",
-                 "referral_id": "str, the case id"},
-        "returns": "{booked: true, clinic, date, time, referral_id}",
-        "failure": "This call is GATED: it may be held for human approval "
-                   "depending on the autonomy setting. If it is held, that is "
-                   "the correct outcome and not an error - report that the "
-                   "booking awaits approval, and name the slot you would take.",
-    },
-    "as_of": {
-        "name": "as_of",
-        "purpose": "The date every urgency window is measured FROM.",
-        "when": "Before computing any window. Cheap - call it rather than "
-                "assuming.",
-        "args": {},
-        "returns": "a date string, e.g. '2026-09-09'",
-        "failure": "Never fails. WATCH OUT: windows are counted from THIS, "
-                   "not from the referral's date_received. They are equal on "
-                   "some referrals and not on others.",
-    },
-
-    # ---- Problem A -------------------------------------------------
     "get_claim": {
         "name": "get_claim",
         "purpose": "Fetch the claim you have been asked to decide.",
@@ -730,28 +429,6 @@ DESCRIPTORS = {
                    "claim - if it does not, you have not finished.",
     },
 
-    "get_clinic_slots": {
-        "name": "get_clinic_slots",
-        "purpose": "Find appointment slots that actually exist and are free, "
-                   "for one specialty in one urgency band inside a date window.",
-        "when": "AFTER all four gates pass. Never before - a red flag or a "
-                "missing mandatory test ends the run and a slot query at that "
-                "point is a wasted call and a wrong record.",
-        "args": {
-            "specialty": "str, the code from the referral, e.g. 'OPH'",
-            "band": "str, REQUIRED, one of urgent|soon|routine, from "
-                    "check_referral_criteria - not your own judgement",
-            "from/to": "str dates, the window measured from as_of()",
-        },
-        "returns": "list of {clinic, specialty, band, date, time, "
-                   "capacity_remaining}, only rows with capacity above zero",
-        "failure": "Returns an EMPTY LIST when nothing is free in that window. "
-                   "Empty means escalate - 'no slot in window' - and it does "
-                   "NOT mean widen the window or drop the band. A slot with "
-                   "capacity_remaining 0 exists and is full; that is a "
-                   "different fact from a slot not existing, and neither is a "
-                   "reason to book outside the band.",
-    },
     "get_preauthorisation": {
         "name": "get_preauthorisation",
         "purpose": "Find a pre-authorisation covering one member for one "
