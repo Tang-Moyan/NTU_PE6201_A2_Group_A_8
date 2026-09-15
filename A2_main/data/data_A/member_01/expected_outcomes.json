@@ -1,0 +1,55 @@
+[
+  {
+    "case_id": "CLM-9001",
+    "expected_decision": "approve_in_principle",
+    "family": "ordinary_single_line",
+    "must_record": [
+      "93000 covered",
+      "approved_total 120"
+    ],
+    "note": "New procedure; shortest path."
+  },
+  {
+    "case_id": "CLM-9002",
+    "expected_decision": "approve_in_principle",
+    "family": "ordinary_two_line",
+    "must_record": [
+      "both lines covered",
+      "approved_total 275"
+    ],
+    "note": "Two independent coverage checks."
+  },
+  {
+    "case_id": "CLM-9003",
+    "expected_decision": "approve_in_principle",
+    "family": "preauth_present_and_valid",
+    "must_record": [
+      "PA-9001 cited for 47562",
+      "approved_total 2600"
+    ],
+    "note": "New pre-authorised procedure."
+  },
+  {
+    "case_id": "CLM-9004",
+    "expected_decision": "approve_in_principle",
+    "family": "excluded_only",
+    "must_record": [
+      "70553 refused under EX-22 advanced imaging",
+      "approved_total 0",
+      "refused_total 650"
+    ],
+    "note": "A fully excluded claim is still decidable, not an escalation."
+  },
+  {
+    "case_id": "CLM-9005",
+    "expected_decision": "approve_in_principle",
+    "family": "partly_payable",
+    "must_record": [
+      "99213 covered",
+      "70553 refused under EX-22",
+      "approved_total 180",
+      "refused_total 650"
+    ],
+    "note": "Tests partial-pay handling."
+  }
+]

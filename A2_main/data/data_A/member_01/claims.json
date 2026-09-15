@@ -1,0 +1,90 @@
+[
+  {
+    "claim_id": "CLM-9001",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-01",
+    "narrative": "My GP asked me to have a heart tracing before my follow-up visit.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "93000",
+        "amount": 120
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9002",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-02",
+    "narrative": "I saw the doctor in the morning and had the requested blood test before going home.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "99213",
+        "amount": 190
+      },
+      {
+        "code": "80053",
+        "amount": 85
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9003",
+    "member_id": "M-7002",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-03",
+    "narrative": "I was admitted for the gallbladder operation that my specialist arranged last month.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "47562",
+        "amount": 2600
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9004",
+    "member_id": "M-7001",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-04",
+    "narrative": "The headaches kept returning, so the neurologist sent me for a scan.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "70553",
+        "amount": 650
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9005",
+    "member_id": "M-7001",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-05",
+    "narrative": "I had the scan and then discussed the results with the specialist on the same visit.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "70553",
+        "amount": 650
+      },
+      {
+        "code": "99213",
+        "amount": 180
+      }
+    ]
+  }
+]
