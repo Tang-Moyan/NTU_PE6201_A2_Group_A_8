@@ -1,0 +1,91 @@
+[
+  {
+    "claim_id": "CLM-9011",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-10",
+    "narrative": "I had the two operations discussed with my orthopaedic and spine specialists.",
+    "documents": [
+      "itemised_bill",
+      "discharge_summary"
+    ],
+    "lines": [
+      {
+        "code": "27447",
+        "amount": 7000
+      },
+      {
+        "code": "62480",
+        "amount": 3500
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9012",
+    "member_id": "M-7004",
+    "hospital_id": "H-330",
+    "date_of_service": "2026-09-11",
+    "narrative": "Bayfront could fit me in sooner for the scan, so I paid there and am claiming it back.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "70553",
+        "amount": 700
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9013",
+    "member_id": "M-7001",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-12",
+    "narrative": "My doctor arranged a scan after I mentioned recurring dizziness.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "70553",
+        "amount": 620
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9014",
+    "member_id": "M-7001",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-13",
+    "narrative": "I met the specialist first and had the scan later that afternoon.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "99213",
+        "amount": 180
+      },
+      {
+        "code": "70553",
+        "amount": 620
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9015",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-14",
+    "narrative": "I returned to the clinic to check that the swelling was improving.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "99213",
+        "amount": 150
+      }
+    ]
+  }
+]

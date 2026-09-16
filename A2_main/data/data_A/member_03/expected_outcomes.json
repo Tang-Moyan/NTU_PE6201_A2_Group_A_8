@@ -1,0 +1,56 @@
+[
+  {
+    "case_id": "CLM-9011",
+    "expected_decision": "approve_in_principle",
+    "family": "two_valid_preauths",
+    "must_record": [
+      "PA-9002 cited for 27447",
+      "PA-9003 cited for 62480",
+      "approved_total 10500"
+    ],
+    "note": "Two independent pre-authorisation chases."
+  },
+  {
+    "case_id": "CLM-9012",
+    "expected_decision": "approve_in_principle",
+    "family": "non_panel_domestic",
+    "must_record": [
+      "H-330 recorded as non-panel",
+      "approved_total 700"
+    ],
+    "note": "Panel status changes record, not outcome."
+  },
+  {
+    "case_id": "CLM-9013",
+    "expected_decision": "approve_in_principle",
+    "family": "excluded_only",
+    "must_record": [
+      "70553 refused under EX-22 advanced imaging",
+      "approved_total 0",
+      "refused_total 620"
+    ],
+    "note": "Repeat excluded-only with a different amount."
+  },
+  {
+    "case_id": "CLM-9014",
+    "expected_decision": "approve_in_principle",
+    "family": "partly_payable",
+    "must_record": [
+      "99213 covered",
+      "70553 refused under EX-22",
+      "approved_total 180",
+      "refused_total 620"
+    ],
+    "note": "Partial-pay on a new exclusion rule."
+  },
+  {
+    "case_id": "CLM-9015",
+    "expected_decision": "approve_in_principle",
+    "family": "ordinary_single_line",
+    "must_record": [
+      "99213 covered",
+      "approved_total 150"
+    ],
+    "note": "Ordinary baseline."
+  }
+]
