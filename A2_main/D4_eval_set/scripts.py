@@ -105,6 +105,178 @@ SCRIPTS = {
          "thought": "Eight calls, four turns. Not an approve and not a "
                     "decline: one decision letter covering both."},
     ],
+    # ---------------------------------------------------------------
+    # CLM-9011 - two covered procedures with two valid pre-authorisations.
+    # ---------------------------------------------------------------
+    "CLM-9011": [
+        {"thought": "First retrieve the claim because the member, hospital and "
+                    "procedure lines are needed before any other lookup.",
+         "calls": [("get_claim", {"claim_id": "CLM-9011"})]},
+
+        {"thought": "The policy, hospital and coverage of both lines depend only "
+                    "on the claim record, so these checks can run in parallel.",
+         "calls": [("lookup_policy", {"member_id": "M-7004"}),
+                   ("check_coverage", {"code": "27447", "policy_id": "POL-8004"}),
+                   ("check_coverage", {"code": "62480", "policy_id": "POL-8004"}),
+                   ("lookup_hospital", {"hospital_id": "H-901"})]},
+
+        {"thought": "Both covered procedures require pre-authorisation. These two "
+                    "authorisation lookups are independent, so they share one turn.",
+         "calls": [("get_preauthorisation", {
+                        "member_id": "M-7004",
+                        "procedure_code": "27447",
+                        "date_of_service": "2026-09-10"}),
+                   ("get_preauthorisation", {
+                        "member_id": "M-7004",
+                        "procedure_code": "62480",
+                        "date_of_service": "2026-09-10"})]},
+
+        {"thought": "Both lines are covered and both pre-authorisations are valid, "
+                    "so the evidence is complete before the gated write.",
+         "calls": [("issue_decision_letter", {
+             "claim_id": "CLM-9011",
+             "decision": "approve_in_principle",
+             "lines_resolved": 2,
+             "approved_total": 10500,
+             "refused_total": 0})]},
+
+        {"final": {
+            "decision": "approve_in_principle",
+            "reason": "2 lines. 27447 covered (7000), PA-9002 cited and valid "
+                      "on 2026-09-10. 62480 covered (3500), PA-9003 cited and "
+                      "valid on 2026-09-10. approved_total 10500. H-901 is on panel.",
+         },
+         "thought": "Both independent pre-authorisation checks succeeded before "
+                    "the decision letter was issued."},
+    ],
+    # ---------------------------------------------------------------
+    # CLM-9012 - covered single line at a non-panel domestic hospital.
+    # ---------------------------------------------------------------
+    "CLM-9012": [
+        {"thought": "First retrieve the claim so the member, hospital and procedure "
+                    "are known before any dependent checks.",
+         "calls": [("get_claim", {"claim_id": "CLM-9012"})]},
+
+        {"thought": "Policy, coverage and hospital status all depend only on the "
+                    "claim record, so they can be checked in parallel.",
+         "calls": [("lookup_policy", {"member_id": "M-7004"}),
+                   ("check_coverage", {"code": "70553", "policy_id": "POL-8004"}),
+                   ("lookup_hospital", {"hospital_id": "H-330"})]},
+
+        {"thought": "The procedure is covered and does not require pre-authorisation. "
+                    "H-330 is non-panel but domestic, which is recorded without "
+                    "changing the outcome.",
+         "calls": [("issue_decision_letter", {
+             "claim_id": "CLM-9012",
+             "decision": "approve_in_principle",
+             "lines_resolved": 1,
+             "approved_total": 700,
+             "refused_total": 0})]},
+
+        {"final": {
+            "decision": "approve_in_principle",
+            "reason": "1 line. 70553 covered (700). H-330 recorded as non-panel "
+                      "domestic hospital. approved_total 700.",
+         },
+         "thought": "No pre-authorisation was required, so the claim completed "
+                    "without an additional lookup turn."},
+    ],
+    # ---------------------------------------------------------------
+    # CLM-9013 - single excluded procedure.
+    # ---------------------------------------------------------------
+    "CLM-9013": [
+        {"thought": "First retrieve the claim so the member, hospital and procedure "
+                    "are available for the dependent checks.",
+         "calls": [("get_claim", {"claim_id": "CLM-9013"})]},
+
+        {"thought": "Policy, coverage and hospital checks are independent once the "
+                    "claim has been retrieved, so they can run in parallel.",
+         "calls": [("lookup_policy", {"member_id": "M-7001"}),
+                   ("check_coverage", {"code": "70553", "policy_id": "POL-8001"}),
+                   ("lookup_hospital", {"hospital_id": "H-901"})]},
+
+        {"thought": "POL-8001 excludes procedure 70553 under EX-22, so the line is "
+                    "refused. No pre-authorisation lookup is needed.",
+         "calls": [("issue_decision_letter", {
+             "claim_id": "CLM-9013",
+             "decision": "approve_in_principle",
+             "lines_resolved": 1,
+             "approved_total": 0,
+             "refused_total": 620})]},
+
+        {"final": {
+            "decision": "approve_in_principle",
+            "reason": "1 line. 70553 refused under EX-22 advanced imaging (620). "
+                      "approved_total 0, refused_total 620. H-901 is on panel.",
+         },
+         "thought": "The exclusion was established directly from the policy record, "
+                    "so no further evidence lookup was required."},
+    ],
+    # ---------------------------------------------------------------
+    # CLM-9014 - partly payable claim: one covered line and one excluded line.
+    # ---------------------------------------------------------------
+    "CLM-9014": [
+        {"thought": "First retrieve the claim so the member, hospital and both "
+                    "procedure lines are known.",
+         "calls": [("get_claim", {"claim_id": "CLM-9014"})]},
+
+        {"thought": "The policy, hospital and coverage checks for both lines depend "
+                    "only on the claim record, so they can run in parallel.",
+         "calls": [("lookup_policy", {"member_id": "M-7001"}),
+                   ("check_coverage", {"code": "99213", "policy_id": "POL-8001"}),
+                   ("check_coverage", {"code": "70553", "policy_id": "POL-8001"}),
+                   ("lookup_hospital", {"hospital_id": "H-901"})]},
+
+        {"thought": "99213 is covered while 70553 is excluded under EX-22. Neither "
+                    "line requires pre-authorisation, so the claim can proceed "
+                    "directly to the gated decision.",
+         "calls": [("issue_decision_letter", {
+             "claim_id": "CLM-9014",
+             "decision": "approve_in_principle",
+             "lines_resolved": 2,
+             "approved_total": 180,
+             "refused_total": 620})]},
+
+        {"final": {
+            "decision": "approve_in_principle",
+            "reason": "2 lines. 99213 covered (180). 70553 refused under EX-22 "
+                      "advanced imaging (620). approved_total 180, refused_total 620. "
+                      "H-901 is on panel.",
+         },
+         "thought": "Both line dispositions were established before the single "
+                    "decision letter was issued."},
+    ],
+    # ---------------------------------------------------------------
+    # CLM-9015 - ordinary covered single-line claim.
+    # ---------------------------------------------------------------
+    "CLM-9015": [
+        {"thought": "First retrieve the claim so the member, hospital and procedure "
+                    "are known.",
+         "calls": [("get_claim", {"claim_id": "CLM-9015"})]},
+
+        {"thought": "Policy, coverage and hospital checks are independent after the "
+                    "claim record is available, so they can run in parallel.",
+         "calls": [("lookup_policy", {"member_id": "M-7004"}),
+                   ("check_coverage", {"code": "99213", "policy_id": "POL-8004"}),
+                   ("lookup_hospital", {"hospital_id": "H-901"})]},
+
+        {"thought": "99213 is covered and does not require pre-authorisation, so all "
+                    "facts needed for the decision are already established.",
+         "calls": [("issue_decision_letter", {
+             "claim_id": "CLM-9015",
+             "decision": "approve_in_principle",
+             "lines_resolved": 1,
+             "approved_total": 150,
+             "refused_total": 0})]},
+
+        {"final": {
+            "decision": "approve_in_principle",
+            "reason": "1 line. 99213 covered (150). approved_total 150. "
+                      "H-901 is on panel.",
+         },
+         "thought": "This is the ordinary short-run baseline with no "
+                    "pre-authorisation lookup required."},
+    ],
 
     # ---------------------------------------------------------------
     # TODO(D4/scripts): your cases go here.
