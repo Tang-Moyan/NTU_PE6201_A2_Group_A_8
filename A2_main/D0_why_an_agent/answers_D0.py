@@ -85,6 +85,24 @@ WORKFLOW_TEST = {
         "applying explicit turn and token caps."
     ),
 }
+# 证据：用你们自己评估集里的具体 case 证明步骤数确实变化。
+# 至少两个 case，一短一长，写出 case_id + turn 数 + 为什么不同。
+# 提示：test_D0.py 会自动去 output/D4_eval.json 读实测 turn 分布，
+#       你只需要在这里写出解释。
+STEP_VARIATION_EVIDENCE = TEMPLATE(
+    "举出至少两个 case_id，说明它们 turn 数不同以及为什么。"
+    "shipped 数据里现成的例子：CLM-8850 (单 line，短) vs CLM-8960 "
+    "(四 line，长) vs CLM-8925 (超额度，两轮就早退)。",
+    example="CLM-8850 resolves in 3 turns (one line, no pre-authorisation). "
+            "CLM-8960 takes 4 (four lines, four coverage checks folded into "
+            "one turn). CLM-8925 stops at 2: the annual limit was breached, "
+            "so pricing the lines would have been turns spent on a decision "
+            "it was never going to make."
+)
+
+# ---------------------------------------------------------------------
+# 2 · The two conditions - 缺一不可
+# ---------------------------------------------------------------------
 CONDITION_STEPS_UNKNOWN = (
     "The required steps are not known in advance because each claim can contain "
     "a different number of lines, and requires_preauth is discovered at runtime "
@@ -96,24 +114,6 @@ CONDITION_GROUND_TRUTH_EACH_STEP = (
     "The next action is therefore corrected by external record evidence rather "
     "than by the model's own previous statement."
 )
-    example="CLM-8850 resolves in 3 turns (one line, no pre-authorisation). "
-            "CLM-8960 takes 4 (four lines, four coverage checks folded into "
-            "one turn). CLM-8925 stops at 2: the annual limit was breached, "
-            "so pricing the lines would have been turns spent on a decision "
-            "it was never going to make.")
-
-# ---------------------------------------------------------------------
-# 2 · The two conditions - 缺一不可
-# ---------------------------------------------------------------------
-CONDITION_STEPS_UNKNOWN = TEMPLATE(
-    "条件一：步骤事先未知。用本问题的机制解释，不要复述定义。",
-    example="requires_preauth is read at runtime, per line.")
-
-CONDITION_GROUND_TRUTH_EACH_STEP = TEMPLATE(
-    "条件二：每一步都拿回 ground truth（工具结果 / 查询 / 跑过的代码），"
-    "现实才能纠正它。没有这条就只是一段自洽的独白。",
-    example="Every turn ends in a tool observation read from the fixture "
-            "JSON, not in the model's own restatement of it.")
 
 # ---------------------------------------------------------------------
 # 3 · The three-question test - 治理悬崖在哪
