@@ -76,7 +76,7 @@ SCRIPTS = {
                    ("check_coverage", {"code": "47120", "policy_id": "POL-3310"}),
                    ("check_coverage", {"code": "31255", "policy_id": "POL-3310"}),
                    ("check_coverage", {"code": "62480", "policy_id": "POL-3310"}),
-                   ("lookup_hospital", {"hospital_id": "H-114"})]},
+                   ]},
 
         {"thought": "This one CANNOT join the turn above: I did not know which "
                     "line needed a pre-authorisation until coverage answered. "
@@ -118,7 +118,7 @@ SCRIPTS = {
          "calls": [("lookup_policy", {"member_id": "M-7004"}),
                    ("check_coverage", {"code": "27447", "policy_id": "POL-8004"}),
                    ("check_coverage", {"code": "62480", "policy_id": "POL-8004"}),
-                   ("lookup_hospital", {"hospital_id": "H-901"})]},
+                   ]},
 
         {"thought": "Both covered procedures require pre-authorisation. These two "
                     "authorisation lookups are independent, so they share one turn.",
@@ -161,7 +161,7 @@ SCRIPTS = {
                     "claim record, so they can be checked in parallel.",
          "calls": [("lookup_policy", {"member_id": "M-7004"}),
                    ("check_coverage", {"code": "70553", "policy_id": "POL-8004"}),
-                   ("lookup_hospital", {"hospital_id": "H-330"})]},
+                   ]},
 
         {"thought": "The procedure is covered and does not require pre-authorisation. "
                     "H-330 is non-panel but domestic, which is recorded without "
@@ -193,7 +193,7 @@ SCRIPTS = {
                     "claim has been retrieved, so they can run in parallel.",
          "calls": [("lookup_policy", {"member_id": "M-7001"}),
                    ("check_coverage", {"code": "70553", "policy_id": "POL-8001"}),
-                   ("lookup_hospital", {"hospital_id": "H-901"})]},
+                   ]},
 
         {"thought": "POL-8001 excludes procedure 70553 under EX-22, so the line is "
                     "refused. No pre-authorisation lookup is needed.",
@@ -225,7 +225,7 @@ SCRIPTS = {
          "calls": [("lookup_policy", {"member_id": "M-7001"}),
                    ("check_coverage", {"code": "99213", "policy_id": "POL-8001"}),
                    ("check_coverage", {"code": "70553", "policy_id": "POL-8001"}),
-                   ("lookup_hospital", {"hospital_id": "H-901"})]},
+                ]},
 
         {"thought": "99213 is covered while 70553 is excluded under EX-22. Neither "
                     "line requires pre-authorisation, so the claim can proceed "
@@ -258,7 +258,7 @@ SCRIPTS = {
                     "claim record is available, so they can run in parallel.",
          "calls": [("lookup_policy", {"member_id": "M-7004"}),
                    ("check_coverage", {"code": "99213", "policy_id": "POL-8004"}),
-                   ("lookup_hospital", {"hospital_id": "H-901"})]},
+                   ]},
 
         {"thought": "99213 is covered and does not require pre-authorisation, so all "
                     "facts needed for the decision are already established.",
