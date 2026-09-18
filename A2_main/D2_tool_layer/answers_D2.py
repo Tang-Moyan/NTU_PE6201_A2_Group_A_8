@@ -33,55 +33,115 @@ from common.template import TEMPLATE
 
 TOOL_AUDIT = {
     "get_claim": {
-        "fails_without_it": TEMPLATE(
-            "Without it, which task fails?",
-            example="Nothing resolves a claim id."),
-        "confusable_with": TEMPLATE(
-            "Confusable with whom? Write 'No' if none.", example="No"),
-        "cost_when_never_called": TEMPLATE(
-            "Cost when never called?",
-            example="Never idle - it is the entry point."),
-        "verdict": TEMPLATE("keep / cut", example="keep"),
+        "fails_without_it": (
+            "No other tool turns a claim id into the member, hospital, date, "
+            "documents, and line items needed by the later checks."
+        ),
+        "confusable_with": (
+            "No. get_claim retrieves the case itself; the other tools check "
+            "one part of that case."
+        ),
+        "cost_when_never_called": (
+            "It is the entry tool, so a normal claim run needs it. Its "
+            "descriptor still adds prompt cost on every turn."
+        ),
+        "verdict": "keep",
     },
     "lookup_policy": {
-        "fails_without_it": TEMPLATE("Without it, which task fails?"),
-        "confusable_with": TEMPLATE("Confusable with whom?"),
-        "cost_when_never_called": TEMPLATE("Cost when never called?"),
-        "verdict": TEMPLATE("keep / cut"),
+        "fails_without_it": (
+            "The agent cannot check policy status, policy dates, remaining "
+            "annual limit, or policy exclusions."
+        ),
+        "confusable_with": (
+            "No. lookup_policy gives whole-policy facts; check_coverage gives "
+            "the result for one procedure line."
+        ),
+        "cost_when_never_called": (
+            "Its descriptor adds prompt cost even if a run ends before using "
+            "it, but policy status and remaining limit are needed for policy "
+            "escalation cases."
+        ),
+        "verdict": "keep",
     },
     "lookup_hospital": {
-        "fails_without_it": TEMPLATE(
-            "Without it, which task fails? Note: panel status does not "
-            "decide the outcome; it only changes what the record must say. "
-            "Be sure this tool actually passes question 1."),
-        "confusable_with": TEMPLATE("Confusable with whom?"),
-        "cost_when_never_called": TEMPLATE("Cost when never called?"),
-        "verdict": TEMPLATE("keep / cut"),
+        "fails_without_it": (
+            "No task fails. CLM-8874 uses a non-panel hospital, but its "
+            "expected decision is still approve_in_principle. It changes "
+            "what the record must SAY, not what the decision is."
+        ),
+        "confusable_with": (
+            "It can be folded into get_claim because get_claim already "
+            "retrieves the claim's hospital id."
+        ),
+        "cost_when_never_called": (
+            "Its descriptor adds prompt cost and its separate call adds work "
+            "for a fact that does not change the outcome."
+        ),
+        "verdict": (
+            "cut - return hospital name and panel status from get_claim "
+            "instead of using a separate call."
+        ),
     },
     "check_coverage": {
-        "fails_without_it": TEMPLATE("Without it, which task fails?"),
-        "confusable_with": TEMPLATE("Confusable with whom?"),
-        "cost_when_never_called": TEMPLATE("Cost when never called?"),
-        "verdict": TEMPLATE("keep / cut"),
+        "fails_without_it": (
+            "The agent cannot tell whether each procedure is covered, "
+            "excluded, needs pre-authorisation, or needs a document."
+        ),
+        "confusable_with": (
+            "No. It checks one procedure line; lookup_policy checks the "
+            "member's full policy."
+        ),
+        "cost_when_never_called": (
+            "It is called once for each line on ordinary claims. Its "
+            "descriptor adds prompt cost even on early policy escalations "
+            "where line checks are skipped."
+        ),
+        "verdict": "keep",
     },
     "get_preauthorisation": {
-        "fails_without_it": TEMPLATE("Without it, which task fails?"),
-        "confusable_with": TEMPLATE("Confusable with whom?"),
-        "cost_when_never_called": TEMPLATE("Cost when never called?"),
-        "verdict": TEMPLATE("keep / cut"),
+        "fails_without_it": (
+            "The agent cannot tell whether a procedure needing "
+            "pre-authorisation has a valid approval for the treatment date."
+        ),
+        "confusable_with": (
+            "No. check_coverage says whether pre-authorisation is needed; "
+            "get_preauthorisation checks whether it exists and is valid."
+        ),
+        "cost_when_never_called": (
+            "Its descriptor adds prompt cost on claims with no "
+            "pre-authorisation requirement, but it is only called after "
+            "check_coverage says it is needed."
+        ),
+        "verdict": "keep",
     },
     "check_duplicate_claim": {
-        "fails_without_it": TEMPLATE("Without it, which task fails?"),
-        "confusable_with": TEMPLATE("Confusable with whom?"),
-        "cost_when_never_called": TEMPLATE("Cost when never called?"),
-        "verdict": TEMPLATE("keep / cut"),
+        "fails_without_it": (
+            "The agent cannot detect a resubmitted claim. CLM-8933 must be "
+            "escalated because it matches prior claim CLM-8710."
+        ),
+        "confusable_with": (
+            "No. It compares the current claim with decided-claim history; "
+            "no other tool reads that history."
+        ),
+        "cost_when_never_called": (
+            "Its descriptor adds prompt cost even when no duplicate is found, "
+            "but the tool covers the distinct duplicate-claim failure mode."
+        ),
+        "verdict": "keep",
     },
     "issue_decision_letter": {
-        "fails_without_it": TEMPLATE("Without it, which task fails?"),
-        "confusable_with": TEMPLATE("Confusable with whom?"),
-        "cost_when_never_called": TEMPLATE(
-            "Cost when never called? Hint: it writes, so it needs a gate."),
-        "verdict": TEMPLATE("keep / cut"),
+        "fails_without_it": (
+            "The whole task has no final decision output without it."
+        ),
+        "confusable_with": (
+            "No. It is the only tool that writes a decision; all other tools "
+            "only return information."
+        ),
+        "cost_when_never_called": (
+            "It is irreversible, so it needs a gate; this is already covered "
+            "by the autonomy setting."
+        ),
+        "verdict": "keep",
     },
 }
 
@@ -91,39 +151,59 @@ TOOL_AUDIT = {
 # Each item: {"tool", "why_added", "observation_that_removed_it"}
 # If you cut none, use []. First ask: of your seven tools, which most
 # resembles Class 4's search_notes (fails both question 1 and question 2)?
-TOOLS_CUT = TEMPLATE(
-    "List of tools cut. Each item is "
-    "{'tool','why_added','observation_that_removed_it'}. "
-    "If none, use [].",
-    example=[{"tool": "lookup_hospital",
-              "why_added": "The brief's minimum set names it.",
-              "observation_that_removed_it": "It never changes the decision, "
-              "only the record. We fold panel status into lookup_policy's "
-              "return and save a call on every run."}])
+TOOLS_CUT = [
+    {
+        "tool": "lookup_hospital",
+        "why_added": (
+            "It was part of the scaffold's seven-tool starting interface so "
+            "the agent could retrieve a hospital's name and panel status."
+        ),
+        "observation_that_removed_it": (
+            "CLM-8874 uses H-330 (Bayfront Specialist), which is non-panel, "
+            "but its expected decision is still approve_in_principle. It "
+            "changes what the record must SAY, not what the decision is. We "
+            "changed get_claim to return the hospital details on its first "
+            "call and removed the separate lookup_hospital call. CLM-8842 "
+            "still passed after the change: approve_in_principle in four "
+            "turns, with seven tool calls instead of eight."
+        ),
+    }
+]
 
 # Before adding a tool, try not adding one. Four moves, in priority order —
 # the report should say which of them you tried.
 FOUR_MOVES_TRIED = {
-    1: TEMPLATE(
-        "Widen an existing tool's arguments instead of adding a sibling. "
-        "Did you try it? What happened?"),
-    2: TEMPLATE(
-        "Return more from one call instead of adding a second lookup. "
-        "Did you try it? What happened?"),
-    3: TEMPLATE(
-        "Move this step out of the loop into ordinary code "
-        "(before or after the agent runs). Did you try it?"),
-    4: TEMPLATE(
-        "Only if the three above fail, add a tool. What did you add? "
-        "Write None if you added nothing."),
+    1: (
+        "Considered, but no change was needed. check_coverage already "
+        "receives the procedure code, and required_documents.json is keyed "
+        "by that code. We did not need to add another input argument."
+    ),
+    2: (
+        "Used. Before the change, no tool read required_documents.json. We "
+        "changed check_coverage to return required_document for the procedure "
+        "code it already receives. On CLM-8901, the claim had no documents "
+        "and procedure 45378 returned required_document: itemised_bill. A "
+        "procedure with no requirement (70553) returned required_document: "
+        "None. We also used this move earlier by returning hospital details "
+        "from get_claim and removing lookup_hospital."
+    ),
+    3: (
+        "Not used. We kept the required-document result inside "
+        "check_coverage rather than moving it into separate ordinary code."
+    ),
+    4: (
+        "Not used. We did not add a new required-document tool because "
+        "check_coverage now returns the needed information."
+    ),
 }
 
-SHORTEST_DEFENSIBLE_LIST = TEMPLATE(
-    "One sentence: why is this the shortest defensible list? "
-    "The rubric says four justified tools beat eleven.",
-    example="Six read-only lookups and one write. Every one of the six is "
-            "on the path from a claim id to a disposition per line; none of "
-            "them overlaps another.")
+SHORTEST_DEFENSIBLE_LIST = (
+    "Five read-only tools provide the claim and hospital details, policy "
+    "status and limits, per-line coverage and document requirements, "
+    "pre-authorisation status, and duplicate history; one gated irreversible "
+    "tool writes the final decision. lookup_hospital was removed because its "
+    "record-only facts now come from get_claim."
+)
 
 
 # =====================================================================
@@ -239,7 +319,7 @@ DESCRIPTOR_EXPERIMENT_VERDICT = TEMPLATE(
 # Ready-made structure for Problem A:
 #   turn 1  get_claim                        must run alone — everything
 #                                            later needs its return
-#   turn 2  lookup_policy + check_coverage×n + lookup_hospital
+#   turn 2  lookup_policy + check_coverage×n
 #                                            mutually independent
 #   turn 3  get_preauthorisation             cannot join turn 2 —
 #                                            until coverage answers, you
@@ -260,7 +340,6 @@ DEPENDS_ON = {
     "get_claim": TEMPLATE("Whose output does it depend on? Entry tool: []",
                           example=[]),
     "lookup_policy": TEMPLATE("Depends on whom?", example=["get_claim"]),
-    "lookup_hospital": TEMPLATE("Depends on whom?"),
     "check_coverage": TEMPLATE(
         "Depends on whom? Note that it needs policy_id."),
     "get_preauthorisation": TEMPLATE(

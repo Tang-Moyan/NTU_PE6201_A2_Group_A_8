@@ -51,15 +51,11 @@ THIS FILE IS D2. The implementations below WORK, on the shipped
 fixtures, today. What they are not is JUSTIFIED - that is the part
 that is yours, and it is where most of the D2 marks are.
 
-    TODO(D2/toolset): run the three questions over this set and decide
-      what stays. Score every tool in answers_D2.py::TOOL_AUDIT, then
-      act on the result: widen a signature, merge two tools, fold a
-      lookup into another's return, or cut one. A tool you REMOVED,
-      naming the observation that removed it, earns explicit credit -
-      that is the behaviour nobody does naturally. Four justified tools
-      beat eleven.
-      Start by asking whether lookup_hospital passes question 1: panel
-      status never changes the decision, only what the record must SAY.
+    D2(a) TOOLSET DECISION:
+    lookup_hospital was removed after CLM-8874 showed that panel status
+    changes the stated reason, not the approve/request/escalate outcome.
+    get_claim now returns the hospital record, leaving five distinct
+    read-only checks and one gated irreversible decision tool.
 
     TODO(D2/poka-yoke): ship at least two more poka-yoke moves, and
       state what each makes IMPOSSIBLE rather than what it discourages.
@@ -116,8 +112,9 @@ def get_claim(claim_id):
     WHAT IT DOES   turns an id into the record: member, hospital, date,
                    attached documents, the member's narrative, and the
                    LINE ITEMS.
-    READS          data_A/claims.json
-    RETURNS        the claim row, or None
+    READS          data_A/claims.json AND data_A/hospitals.json
+    RETURNS        the claim row plus `hospital` {hospital_id, name,
+                   panel, country}, or None
     RETURNS NONE   when no claim has that id - a broken case, not an
                    outcome.
     WATCH OUT      `lines` is a LIST. Nine of the fifteen shipped claims
@@ -133,7 +130,9 @@ def get_claim(claim_id):
     """
     for c in _load("A", "claims"):
         if c["claim_id"] == claim_id:
-            return c
+            hospital = next((h for h in _load("A", "hospitals")
+                             if h["hospital_id"] == c["hospital_id"]), None)
+            return {**c, "hospital": hospital}
     return None
 
 
@@ -175,34 +174,17 @@ def lookup_policy(member_id):
             "remaining": p["annual_limit"] - p["used_to_date"]}
 
 
-def lookup_hospital(hospital_id):
-    """Is the hospital inside the insurer's network?
-
-    WHAT IT DOES   one boolean and a name.
-    READS          data_A/hospitals.json
-    RETURNS        {hospital_id, name, panel, country} or None
-    WATCH OUT      panel status does NOT by itself decide the claim. A
-                   non-panel hospital means the member paid and is
-                   claiming it back rather than the insurer settling
-                   directly - so it changes what the record must SAY, not
-                   what the decision IS.
-
-    It is still a required call. An agent that never checked cannot
-    claim it did, and the decision record is what a marker reads.
-    """
-    return next((h for h in _load("A", "hospitals")
-                 if h["hospital_id"] == hospital_id), None)
-
-
 def check_coverage(code, policy_id):
     """Is this ONE procedure payable under THIS policy?
 
     WHAT IT DOES   resolves one line item: what the code means, whether
                    it needed permission first, and whether this product
                    excludes it.
-    READS          data_A/procedures.json AND data_A/policies.json
+    READS          data_A/procedures.json, data_A/policies.json AND
+                   data_A/required_documents.json
     RETURNS        {"code", "description", "requires_preauth" (bool),
-                    "excluded" (bool), "exclusion_rule" (str or None)}
+                    "excluded" (bool), "exclusion_rule" (str or None),
+                    "required_document" (str or None)}
     RETURNS NONE   when the code or the policy does not exist.
     WATCH OUT      CALL THIS ONCE PER LINE. A three-line claim needs
                    three calls - and because they are independent of each
@@ -232,11 +214,14 @@ def check_coverage(code, policy_id):
     if proc is None or pol is None:
         return None
     excl = next((e for e in pol["exclusions"] if e["code"] == code), None)
+    requirement = next((r for r in _load("A", "required_documents")
+                        if r["procedure_code"] == code), None)
     return {"code": code,
             "description": proc["description"],
             "requires_preauth": proc["requires_preauth"],
             "excluded": excl is not None,
-            "exclusion_rule": excl["rule"] if excl else None}
+            "exclusion_rule": excl["rule"] if excl else None,
+            "required_document": requirement["document"] if requirement else None}
 
 
 def get_preauthorisation(member_id, procedure_code, date_of_service):
@@ -347,7 +332,6 @@ REGISTRY = {
     "A": {
         "get_claim": get_claim,
         "lookup_policy": lookup_policy,
-        "lookup_hospital": lookup_hospital,
         "check_coverage": check_coverage,
         "get_preauthorisation": get_preauthorisation,
         "check_duplicate_claim": check_duplicate_claim,
@@ -377,7 +361,8 @@ DESCRIPTORS = {
                 "and line items it returns.",
         "args": {"claim_id": "str, the case id you were given"},
         "returns": "{claim_id, member_id, hospital_id, date_of_service, "
-                   "narrative, documents[], lines[{code, amount}]}",
+                   "narrative, documents[], lines[{code, amount}], "
+                   "hospital:{hospital_id, name, panel (bool), country}}",
         "failure": "Returns None when no claim has that id - a broken case. "
                    "NOTE lines is a LIST: every line needs its own coverage "
                    "check and its own disposition.",
@@ -386,8 +371,8 @@ DESCRIPTORS = {
         "name": "lookup_policy",
         "purpose": "The member's policy, and how much of the annual limit is "
                    "left.",
-        "when": "After get_claim. Independent of the coverage checks and the "
-                "hospital lookup, so all of them fit in one turn.",
+        "when": "After get_claim. Independent of coverage checks, so all "
+                "of them fit in one turn.",
         "args": {"member_id": "str, from the claim"},
         "returns": "{member: {...}, policy: {status, start_date, end_date, "
                    "annual_limit, used_to_date, exclusions[]}, remaining: int}",
@@ -398,17 +383,6 @@ DESCRIPTORS = {
                    "start_date..end_date EVEN IF status is active, and lines "
                    "exceeding `remaining`.",
     },
-    "lookup_hospital": {
-        "name": "lookup_hospital",
-        "purpose": "Whether the hospital is on the insurer's panel.",
-        "when": "After get_claim, alongside the other independent lookups.",
-        "args": {"hospital_id": "str, from the claim"},
-        "returns": "{hospital_id, name, panel (bool), country}",
-        "failure": "Returns None when the hospital does not exist. panel "
-                   "false does NOT decide the claim - it changes what the "
-                   "record must SAY, not what the decision is. Record it "
-                   "either way.",
-    },
     "check_coverage": {
         "name": "check_coverage",
         "purpose": "Whether ONE procedure code is payable under ONE policy.",
@@ -417,12 +391,16 @@ DESCRIPTORS = {
         "args": {"code": "str, one line's procedure code",
                  "policy_id": "str, REQUIRED, from lookup_policy"},
         "returns": "{code, description, requires_preauth (bool), excluded "
-                   "(bool), exclusion_rule (str or None)}",
+                   "(bool), exclusion_rule (str or None), required_document "
+                   "(str or None)}",
         "failure": "Returns None when the code or policy does not exist. TWO "
                    "FIELDS DRIVE WHAT HAPPENS NEXT: requires_preauth true "
                    "means look for an approval, false means do not. excluded "
                    "refuses THAT LINE, not the claim - cite exclusion_rule by "
-                   "name, and keep deciding the other lines.",
+                   "name, and keep deciding the other lines. If "
+                   "required_document is not None, compare it with the "
+                   "claim's documents and request that exact document if it "
+                   "is absent.",
     },
     "check_duplicate_claim": {
         "name": "check_duplicate_claim",
