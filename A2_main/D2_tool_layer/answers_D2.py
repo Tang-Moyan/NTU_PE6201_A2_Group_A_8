@@ -63,25 +63,6 @@ TOOL_AUDIT = {
         ),
         "verdict": "keep",
     },
-    "lookup_hospital": {
-        "fails_without_it": (
-            "No task fails. CLM-8874 uses a non-panel hospital, but its "
-            "expected decision is still approve_in_principle. It changes "
-            "what the record must SAY, not what the decision is."
-        ),
-        "confusable_with": (
-            "It can be folded into get_claim because get_claim already "
-            "retrieves the claim's hospital id."
-        ),
-        "cost_when_never_called": (
-            "Its descriptor adds prompt cost and its separate call adds work "
-            "for a fact that does not change the outcome."
-        ),
-        "verdict": (
-            "cut - return hospital name and panel status from get_claim "
-            "instead of using a separate call."
-        ),
-    },
     "check_coverage": {
         "fails_without_it": (
             "The agent cannot tell whether each procedure is covered, "
