@@ -34,7 +34,10 @@ def _key():
 def test_set_shape(c):
     key = _key()
     total = len(key)
-    negatives = [r for r in key if r.get("expected_decision") in NEGATIVE]
+    negatives = [
+        row for row in A.EXTRA_LABELS
+        if row.get("expected_decision") in NEGATIVE
+    ]
 
     c.require("30-50 cases", 30 <= total <= 50,
               "the answer key has %d. A 10-case set cannot tell two policies "
