@@ -97,7 +97,7 @@ CAPS = {
 #   C  便宜模型跑一次的成本 —— **只算 token**
 #   E  贵模型一次**成功** task 的成本 —— 它自己的 layer1 + layer2
 #   F  一次失败的成本 —— 上面算出来的 failure_cost
-CHEAP_MODEL = "deepseek/deepseek-v4.1-flash"      # 0.15 / 0.60 per M
+CHEAP_MODEL = "minimax/minimax-m2.7"              # 0.30 / 1.20 per M list
 EXPENSIVE_MODEL = "google/gemini-3.8-flash"       # 0.75 / 3.75 per M
 
 # 如果 D5 的 live battery 还没跑，这两个填 None，框架会跳过并提示。
