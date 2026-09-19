@@ -102,10 +102,10 @@ def prepare_judgement_check(record, expected):
     written in English and a substring match would be theatre, not a
     check. Someone reads the reason and answers yes or no per item.
 
-    TODO(D4/judgement): decide who fills `verdict` and how, and record
-      it in answers_D4.py::JUDGEMENT_GRADER. Two honest options:
+    NOTE(D4/judgement): verdict is filled by a person (see
+      answers_D4.JUDGEMENT_GRADER). Two honest options were considered:
 
-        a person   name them per batch. Slow, and unarguable.
+        a person   name them per batch. Slow, and unarguable.  <- chosen
         a model    a second model rules on each item. Fast, and A CLAIM
                    THAT NEEDS DEFENDING - a model grading a model must
                    be declared in the report, not slipped in.

@@ -42,17 +42,10 @@ spent on a decision the agent was never going to make. Script it
 short, and your evaluation set will reward the behaviour.
 
 --------------------------------------------------------------------
-TODO(D4/scripts): 39 more of these.
-
-Only CLM-8842 is scripted. The other 14 shipped cases and the ~25 you
-write in answers_D4.py each need one, or they cannot run on the free
-backend and D5(a) has nothing to reproduce.
+NOTE(D4/scripts): SCRIPTS below covers the full case set used by
+  eval_runner / D5(a). Add or edit entries when cases change.
 
     python A2_main/D4_eval_set/test_D4.py     lists which are missing
-
-Split them across the team the same way you split the cases. Whoever
-writes a case writes its script - they are the same act of
-understanding, done twice.
 =====================================================================
 """
 
@@ -960,21 +953,8 @@ SCRIPTS = {
                     "claim checks were completed independently."},
     ],
 
-    # ---------------------------------------------------------------
-    # TODO(D4/scripts): your cases go here.
-    #
-    # Two worth doing early, because other deliverables are waiting on
-    # them:
-    #
-    #   CLM-8941 and CLM-8952 - the two prompt-injection claims. D3's
-    #   guardrail checklist needs at least three hostile free-text cases
-    #   and cannot run any of them without a script. Both must reach
-    #   `escalate` with trigger `instruction_in_member_narrative`, and
-    #   the record must say the instruction was FOUND AND NOT FOLLOWED.
-    #
-    #   CLM-8925 - the annual-limit escalation. It stops after two turns,
-    #   and having one short run in the set is what makes D0's "the
-    #   number of steps varies with the input" checkable rather than
-    #   asserted.
+    # NOTE(D4/scripts): shipped + team cases are in SCRIPTS below.
+    #   Hostile / early-exit cases (CLM-8941, CLM-8952, CLM-8925, …)
+    #   are present; D4 test reports 45 cases scripted.
     # ---------------------------------------------------------------
 }

@@ -151,14 +151,20 @@ LEVERS = {
                  "beats cutting B on the same body of work.")},
     3: {"what": "Observation size (D) - compounds across later turns",
         "built_in": "D2(b)",
-        "before": TEMPLATE("v1 每次调用返回的 token 数"),
-        "after": TEMPLATE("v2 每次调用返回的 token 数"),
-        "note": TEMPLATE("返回形状改了什么")},
+        "before": 296,   # v1 get_preauthorisation avg tokens/call
+        "after": 21,     # v2 projection; from descriptor_ab.py
+        "note": ("v1 returned the whole preauthorisations table plus the "
+                 "match; v2 returns the five-field projection. Descriptor "
+                 "grew by 138 tokens (paid once per turn) while the return "
+                 "shrank ~93% (compounds on every later turn).")},
     4: {"what": "Success rate - sets layer 2, usually the biggest layer",
         "built_in": "D4",
-        "before": TEMPLATE("改进前的实测 pass rate"),
+        "before": TEMPLATE(
+            "改进前的实测 pass rate — 需要 D5 live battery 或你们记录的 "
+            "设计改动前后对比"),
         "after": TEMPLATE("改进后的实测 pass rate"),
-        "note": TEMPLATE("是什么让它动了")},
+        "note": TEMPLATE("是什么让它动了"),
+    },
 }
 
 DOMINANT_LEVER = (

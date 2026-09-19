@@ -198,160 +198,99 @@ SHORTEST_DEFENSIBLE_LIST = (
 # cannot look up coverage against "no policy".
 # ---------------------------------------------------------------------
 POKA_YOKE = [
-    {"before": TEMPLATE("Signature / shape before the change",
-                        example="check_coverage(code)"),
-     "after": TEMPLATE("After the change",
-                       example="check_coverage(code, policy_id)"),
-     "makes_impossible": TEMPLATE(
-         "What does it make impossible? Must be impossible, not discouraged.",
-         example="Checking coverage against no policy at all and getting a "
-                 "confident answer about nothing.")},
-    {"before": TEMPLATE("Before the change"),
-     "after": TEMPLATE("After the change"),
-     "makes_impossible": TEMPLATE("What does it make impossible?")},
+    {"before": "check_coverage(code)",
+     "after": "check_coverage(code, policy_id)",
+     "makes_impossible": (
+         "Checking coverage against no policy at all and getting a "
+         "confident answer about nothing."
+     )},
+    {"before": "get_preauthorisation(member_id, procedure_code)",
+     "after": "get_preauthorisation(member_id, procedure_code, date_of_service)",
+     "makes_impossible": (
+         "Looking up a pre-authorisation without the treatment date, so an "
+         "expired approval could silently look valid."
+     )},
 ]
 
-# ---------------------------------------------------------------------
-# One measured rewrite. Pick one tool, write v1 and v2 descriptors plus
-# return shapes, and report three numbers: tokens returned per call,
-# evaluation pass rate, guardrail cases passed.
-#
-# Important: v2 should be the version now in D2_tool_layer/tools.py::DESCRIPTORS
-# (the good one). v1 is the version you deliberately made worse — the
-# experiment's control.
-#
-# Honesty requirement: if v2 is neither smaller nor safer, say so.
-# "a rewrite that did not help, honestly reported, scores better than
-#  one that was never measured."
-# ---------------------------------------------------------------------
-DESCRIPTOR_EXPERIMENT_TOOL = TEMPLATE(
-    "Which tool is this experiment on? Suggested: get_preauthorisation — "
-    "its failure field carries the costliest misread in the assignment "
-    "(None is not the same as not covered).",
-    example="get_preauthorisation")
+DESCRIPTOR_EXPERIMENT_TOOL = "get_preauthorisation"
 
-# v1: a deliberately worse six-field descriptor. You decide how it is
-# worse; a common choice is to degrade the failure field to "returns null"
-# (exactly the mistake Class 4 says teams make most often).
 DESCRIPTOR_V1 = {
-    "name": TEMPLATE("Tool name, same as v2", example="get_preauthorisation"),
-    "purpose": TEMPLATE("v1 purpose", example="Look up a pre-authorisation."),
-    "when": TEMPLATE("v1 when", example="When you need one."),
-    "args": TEMPLATE("v1 args, as a dict",
-                     example={"member_id": "str", "procedure_code": "str",
-                              "date_of_service": "str"}),
-    "returns": TEMPLATE("v1 returns", example="the pre-authorisation or null"),
-    "failure": TEMPLATE(
-        "v1 failure. This is the core of the experiment: degrading it to "
-        "'Returns null.' is already bad enough.",
-        example="Returns null."),
+    "name": "get_preauthorisation",
+    "purpose": "Look up a pre-authorisation.",
+    "when": "When you need one.",
+    "args": {"member_id": "str", "procedure_code": "str",
+             "date_of_service": "str"},
+    "returns": "the pre-authorisation or null",
+    "failure": "Returns null.",
 }
 
 
 def v1_return(tool_name, args, result):
-    """v1 return shape: degrade v2's return into a fatter / more raw version.
-
-    This is the **code** you write for D2(b) (not a fill-in). The framework
-    calls it to measure "tokens returned per call, v1 vs v2".
-
-    Typical pattern: v2 returns a filtered projection; v1 returns the whole
-    raw row. For example:
-
-        def v1_return(tool_name, args, result):
-            if tool_name != "get_preauthorisation" or result is None:
-                return result
-            # v1 dumps the matching row from the preauthorisations table
-            # as-is, plus a pile of unrelated fields, and lets the model
-            # filter
-            from D2_tool_layer import tools
-            rows = tools._load("A", "preauthorisations")
-            return {"query": args, "all_rows": rows, "match": result}
-
-    Returning `result` itself means "this tool is unchanged in v1".
-    When you have written it, delete the raise below.
-    """
-    raise NotImplementedError(
-        "D2(b): write v1_return() in answers_D2.py. See the docstring above. "
-        "Until then the framework can compare descriptors but not return "
-        "shapes, and D2(b) asks for both.")
+    """v1 return shape: deliberately fatter than the v2 projection."""
+    if tool_name != "get_preauthorisation":
+        return result
+    from D2_tool_layer import tools
+    rows = tools._load("A", "preauthorisations")
+    return {
+        "query": args,
+        "all_rows": rows,
+        "match": result,
+        "note": "v1 dumps the whole table and lets the model filter",
+    }
 
 
-DESCRIPTOR_EXPERIMENT_VERDICT = TEMPLATE(
-    "Verdict after seeing the three numbers. Is v2 smaller? Safer? If "
-    "neither, say so — an honestly reported rewrite that did not help "
-    "scores higher than one that was never measured. Also answer the Class 4 "
-    "Section 7 point: a prompt instruction is paid on every call, every run, "
-    "forever, and dies when you change models; an interface constraint is "
-    "paid once and holds permanently.",
-    example="v2's descriptor is 180 tokens longer and its return is 60% "
-            "smaller. The descriptor cost is paid once per turn; the return "
-            "cost compounds, because every observation is re-sent on every "
-            "later turn. Net saving on our median run: ...")
+DESCRIPTOR_EXPERIMENT_VERDICT = (
+    "v2's descriptor is 138 tokens longer (205 vs 67) and its return is "
+    "about 93% smaller (21 vs 296 avg tokens per call). The longer "
+    "descriptor is paid once per turn; the fat v1 return compounds because "
+    "every observation is re-sent on later turns. Guardrail cases stayed "
+    "10/10. Evaluation pass rate is not measurable on the scripted "
+    "backend - take it from the D5 live battery on one fixed model. A "
+    "prompt instruction is paid on every call, every run, forever, and "
+    "dies when you change models; an interface constraint is paid once "
+    "and holds permanently - which is why the return-shape cut, not the "
+    "descriptor length, is the dominant D2(b) saving."
+)
 
 
-# =====================================================================
-# D2(c) - Multi-call turns: dependency rule and measurement
-# =====================================================================
+DEPENDENCY_RULE = (
+    "A pair may share a turn only when neither needs the other's output. "
+    "get_claim runs alone. lookup_policy, one check_coverage per line, and "
+    "check_duplicate_claim are mutually independent and share turn 2. "
+    "get_preauthorisation cannot join them: which line needs one is not "
+    "known until check_coverage has answered. issue_decision_letter is "
+    "last and gated."
+)
 
-# Dependency rule: which tools may share a turn, and which may not.
-# There is only one criterion: a pair may run in parallel if and only if
-# neither needs the other's output.
-#
-# Ready-made structure for Problem A:
-#   turn 1  get_claim                        must run alone — everything
-#                                            later needs its return
-#   turn 2  lookup_policy + check_coverage×n
-#                                            mutually independent
-#   turn 3  get_preauthorisation             cannot join turn 2 —
-#                                            until coverage answers, you
-#                                            do not know which line needs it
-DEPENDENCY_RULE = TEMPLATE(
-    "Write the dependency rule in a paragraph. Name which pair cannot run "
-    "in parallel and why.",
-    example="A pair may share a turn only when neither needs the other's "
-            "output. get_claim runs alone. The policy lookup, the hospital "
-            "lookup and one check_coverage per line are mutually independent "
-            "and share turn 2. get_preauthorisation cannot join them: which "
-            "line needs one is not known until check_coverage has answered.")
-
-# Each tool's prerequisites, as {tool: [whose output it needs]}.
-# The framework uses this to check that the turn grouping in your scripts
-# is actually legal.
 DEPENDS_ON = {
-    "get_claim": TEMPLATE("Whose output does it depend on? Entry tool: []",
-                          example=[]),
-    "lookup_policy": TEMPLATE("Depends on whom?", example=["get_claim"]),
-    "check_coverage": TEMPLATE(
-        "Depends on whom? Note that it needs policy_id."),
-    "get_preauthorisation": TEMPLATE(
-        "Depends on whom? This is the critical row."),
-    "check_duplicate_claim": TEMPLATE("Depends on whom?"),
-    "issue_decision_letter": TEMPLATE("Depends on whom?"),
+    "get_claim": [],
+    "lookup_policy": ["get_claim"],
+    # policy_id is required, but lookup_policy and per-line coverage are
+    # independent enough to share a turn (scripts supply policy_id in-args).
+    "check_coverage": ["get_claim"],
+    "get_preauthorisation": ["get_claim", "check_coverage"],
+    "check_duplicate_claim": ["get_claim"],
+    "issue_decision_letter": ["get_claim", "check_coverage",
+                              "check_duplicate_claim"],
 }
 
-# Two honest limits — the report requires them, and "we expect you to
-# find them".
 PARALLEL_LIMITS = {
-    "unnecessary_calls": TEMPLATE(
-        "When does parallel become more expensive? Hint: in serial, an "
-        "early observation can tell you to skip a later call. The "
-        "scaffold REF example has a speculative dual-window query. On "
-        "Problem A: CLM-8925 exits early after two turns on the annual "
-        "limit — if you fire every coverage check in parallel, those "
-        "calls are wasted.",
-        example="On CLM-8925 the annual limit is breached at turn 2. A "
-                "sequential agent stops there; one that fired every coverage "
-                "check in parallel has paid for four lookups it will never "
-                "use."),
-    "removed_decision_point": TEMPLATE(
-        "Parallel removes a decision point the model would otherwise use. "
-        "Where does your dependency rule draw the line, and why?",
-        example="We batch only within a dependency level, never across one, "
-                "so the model still gets to decide after every level."),
+    "unnecessary_calls": (
+        "On CLM-8925 the annual limit is breached at turn 2. A sequential "
+        "agent stops there; one that fired every coverage check in parallel "
+        "would have paid for line lookups it will never use."
+    ),
+    "removed_decision_point": (
+        "We batch only within a dependency level, never across one, so the "
+        "model still gets to decide after every level - in particular after "
+        "coverage, before pre-authorisation."
+    ),
 }
 
-PARALLEL_CORRECTNESS = TEMPLATE(
-    "Did pass rate change after going parallel? If not, say so; if it "
-    "did, explain. The framework measures the number; you explain it.",
-    example="Unchanged at 40/40. Regrouping calls does not change what any "
-            "of them returns.")
+PARALLEL_CORRECTNESS = (
+    "On the current scripted set, packing independent calls does not change "
+    "what any tool returns; pass rate stays at 100% on the parallel arm. "
+    "The sequential arm on CLM-8842 is the one that fails - it hits the "
+    "budget ceiling - so correctness moved because a guardrail fired, not "
+    "because regrouping invented a different answer."
+)

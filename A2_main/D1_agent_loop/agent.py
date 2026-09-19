@@ -84,11 +84,11 @@ def run_case(case_id, problem=None, approve=None, verbose=False):
     # deterministic. The RECORD still shows the gate was reached and
     # passed, which is what a marker looks for.
     #
-    # TODO(D3/gate): decide what a real `approve` callback would do and
-    #   say so in the report. Auto-approving keeps the eval reproducible;
-    #   it is NOT the same claim as "a human approved it". D3(a) asks you
-    #   to defend the autonomy setting, and this lambda is where that
-    #   setting actually bites.
+    # NOTE(D3/gate): production approve() is a human confirm UI over the
+    #   letter payload (accept / reject). Auto-True here is for
+    #   reproducible eval only — defended in answers_D3.LIMITS_EVIDENCE
+    #   ['AUTONOMY'] and GATE_PLACEMENT_DEFENCE. It is NOT "a human
+    #   approved it".
     if approve is None:
         approve = lambda action, payload: True
 
@@ -120,7 +120,7 @@ def run_case(case_id, problem=None, approve=None, verbose=False):
             # A dependency chain cannot be shortened by running things at
             # once - the pre-authorisation lookup has to wait for coverage.
             #
-            # TODO(D2/dependency): this loop executes whatever the backend
+            #   (D2/dependency): this loop executes whatever the backend
             #   groups together and trusts it. Nothing here ENFORCES your
             #   dependency rule at runtime. D2_tool_layer/parallel_ab.py
             #   checks the scripts offline; if you want the rule enforced

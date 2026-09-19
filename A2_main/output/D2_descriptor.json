@@ -1,0 +1,30 @@
+{
+  "name": "D2_descriptor",
+  "written_at": "2026-09-19T21:34:09",
+  "written_by": "D2/descriptor_ab.py",
+  "payload": {
+    "tool": "get_preauthorisation",
+    "descriptor": {
+      "v1_tokens": 67,
+      "v1_chars": 271,
+      "v2_tokens": 205,
+      "v2_chars": 820
+    },
+    "whole_prompt": {
+      "v2": 1478,
+      "v1": 1340
+    },
+    "returns": {
+      "calls": 12,
+      "v2_avg_tokens": 21.333333333333332,
+      "v1_avg_tokens": 295.6666666666667,
+      "v1_written": true,
+      "estimated": true
+    },
+    "guardrails": {
+      "passed": 10,
+      "total": 10
+    },
+    "live": false
+  }
+}

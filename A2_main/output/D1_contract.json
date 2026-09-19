@@ -1,6 +1,6 @@
 {
   "name": "D1_contract",
-  "written_at": "2026-09-07T16:20:01",
+  "written_at": "2026-09-19T22:00:29",
   "written_by": "D1/test_D1.py",
   "payload": {
     "case": "CLM-8842",
@@ -12,8 +12,7 @@
         "lookup_policy",
         "check_coverage",
         "check_coverage",
-        "check_coverage",
-        "lookup_hospital"
+        "check_coverage"
       ],
       [
         "get_preauthorisation"
@@ -36,12 +35,12 @@
       {
         "clause": "3 several tools",
         "held": true,
-        "detail": "6 distinct: check_coverage, get_claim, get_preauthorisation, issue_decision_letter, lookup_hospital, lookup_policy"
+        "detail": "5 distinct: check_coverage, get_claim, get_preauthorisation, issue_decision_letter, lookup_policy"
       },
       {
         "clause": "4 multi-call turn",
         "held": true,
-        "detail": "8 tool calls in 4 turns - a loop that never batches has not met D2(c)"
+        "detail": "7 tool calls in 4 turns - a loop that never batches has not met D2(c)"
       },
       {
         "clause": "5 instrumented",

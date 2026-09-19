@@ -47,13 +47,9 @@ PROBLEM = "A"
 # turns and your worst legitimate run is 7, a cap of 8 is defensible
 # and a cap of 30 is decoration.
 #
-# TODO(D3/limits): set these three from your MEASURED turn distribution.
-#   Run A2_main/D7_failures/failure_runs.py first - it prints the median,
-#   the worst legitimate run and how many runs hit the cap. Then record
-#   the reasoning in D3_guardrails/answers_D3.py::LIMITS_EVIDENCE.
-#   test_D3.py compares the two and fails if they disagree, because a cap
-#   defended in the report that config.py does not run is a paragraph,
-#   not a cap.
+# NOTE(D3/limits): set from MEASURED turn distribution (failure_runs.py).
+#   Measured (81 trials): median 3, worst legitimate 4, 0 hit cap.
+#   Defended in answers_D3.LIMITS_EVIDENCE; test_D3.py compares both.
 # ─────────────────────────────────────────────────────────────────────
 MAX_TURNS = 8                 # step cap
 MAX_TOKENS_PER_RUN = 60000    # budget ceiling

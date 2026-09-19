@@ -32,9 +32,26 @@ LIMITS = {
 }
 
 LIMITS_EVIDENCE = {
-    "MAX_TURNS": "The observed median run is 4 turns and the longest legitimate run is 6 turns (the four-line claim CLM-8960). A cap of 8 leaves two turns of headroom while stopping a non-progressing run promptly.",
-    "MAX_TOKENS_PER_RUN": "The serial CLM-8842 path reaches 60,480 tokens and crosses the 60,000-token ceiling, demonstrating that the limit is live. The highest legitimate parallel run is 21,600 tokens, so 60,000 permits normal work with substantial headroom.",
-    "AUTONOMY": "We use confirm. Six of seven tools are read-only and may gather evidence autonomously; only issue_decision_letter creates an insurer commitment, so that action waits for explicit approval.",
+    "MAX_TURNS": (
+        "Measured on the full scripted set (81 trials / 45 cases): median 3 "
+        "turns, worst legitimate 4, 0 hit the cap. A cap of 8 leaves four "
+        "turns of headroom while still stopping a runaway inside one extra "
+        "observation cycle."
+    ),
+    "MAX_TOKENS_PER_RUN": (
+        "The serial CLM-8842 path reaches 59,400–60,480 tokens and crosses "
+        "the 60,000-token ceiling, so the limit is live. The highest "
+        "legitimate parallel run on that case is 21,600 tokens."
+    ),
+    "AUTONOMY": (
+        "We use confirm. Six of seven tools are read-only and may gather "
+        "evidence autonomously; only issue_decision_letter creates an "
+        "insurer commitment, so that action waits for explicit approval. "
+        "On the scripted backend the approve callback auto-returns True so "
+        "eval stays reproducible; that is NOT the same claim as a human "
+        "approval. In production the callback would be a confirm UI that "
+        "blocks until an assessor accepts or rejects the letter payload."
+    ),
 }
 
 GATE_PLACEMENT_DEFENCE = "The gate is placed immediately before the irreversible action, not before the agent. Putting it at the start would block harmless evidence gathering and turn the system into a form. This placement preserves autonomous investigation while requiring a human to approve the single action that commits the insurer."

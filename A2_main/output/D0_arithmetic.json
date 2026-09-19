@@ -1,10 +1,10 @@
 {
   "name": "D0_arithmetic",
-  "written_at": "2026-09-07T16:20:01",
+  "written_at": "2026-09-19T22:00:29",
   "written_by": "D0/framework.py",
   "payload": {
     "measured_pass_rate": 1.0,
-    "measured_median_turns": 4,
+    "measured_median_turns": 3,
     "implied_step_reliability": 1.0,
     "turn_sensitivity": [
       [

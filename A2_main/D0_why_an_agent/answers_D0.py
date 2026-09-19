@@ -89,15 +89,14 @@ WORKFLOW_TEST = {
 # 至少两个 case，一短一长，写出 case_id + turn 数 + 为什么不同。
 # 提示：test_D0.py 会自动去 output/D4_eval.json 读实测 turn 分布，
 #       你只需要在这里写出解释。
-STEP_VARIATION_EVIDENCE = TEMPLATE(
-    "举出至少两个 case_id，说明它们 turn 数不同以及为什么。"
-    "shipped 数据里现成的例子：CLM-8850 (单 line，短) vs CLM-8960 "
-    "(四 line，长) vs CLM-8925 (超额度，两轮就早退)。",
-    example="CLM-8850 resolves in 3 turns (one line, no pre-authorisation). "
-            "CLM-8960 takes 4 (four lines, four coverage checks folded into "
-            "one turn). CLM-8925 stops at 2: the annual limit was breached, "
-            "so pricing the lines would have been turns spent on a decision "
-            "it was never going to make."
+STEP_VARIATION_EVIDENCE = (
+    "CLM-8925 stops at 2 turns: the annual limit is already breached, so "
+    "line-level pricing would be turns spent on a decision it was never "
+    "going to make. CLM-8850 resolves in 3 turns (one covered line, no "
+    "pre-authorisation). CLM-8960 takes 4 turns (four lines, four coverage "
+    "checks folded into one turn, then the gated letter). The measured "
+    "histogram on 81 trials is turns 2 / 3 / 4 — the step count varies "
+    "with the claim, not with a fixed workflow."
 )
 
 # ---------------------------------------------------------------------
@@ -175,21 +174,23 @@ GROUND_TRUTH_VERDICT = (
 #   P 和 T 由框架从 D4 / D7 的实测结果自动读取并算出 s = P^(1/T)。
 #   你们要填的是"这个数说明了什么"。
 # ---------------------------------------------------------------------
-ARITHMETIC_READING = TEMPLATE(
-    "看到实测的 s 之后：你们的问题是 step QUALITY 还是 step COUNT？"
-    "二选一并给理由。这决定了接下来该做 D2(b) 还是 D2(c)。",
-    example="Step count. Our implied s is high but the median run is long, "
-            "and the sensitivity table shows the same s at 3 turns instead "
-            "of 6 would move the run pass rate by more than any descriptor "
-            "rewrite we attempted.")
+ARITHMETIC_READING = (
+    "Step count. On the scripted set implied s is already high (near 1.0) "
+    "while the median run is still 3 turns and the longest legitimate run "
+    "is 4; the D2(c) serial arm on CLM-8842 burned 8 turns / 59,400 tokens "
+    "and hit the budget ceiling. Cutting T by packing independent coverage "
+    "checks moves pass rate and cost more than any descriptor polish we "
+    "have measured so far."
+)
 
-WEAK_STEP_READING = TEMPLATE(
-    "框架会按'失败前最后一个工具调用'给出候选弱步骤。写出你们的判断："
-    "哪个步骤是弱的，以及你们选了 (a) 修它 还是 (b) 去掉它。"
-    "注意：弱步骤通常两头都吃亏——返回得差，agent 就会重读、重试、"
-    "游走，于是 s 降低而 T 升高。一个修复能同时动两项。",
-    example="check_coverage on a narrative-heavy claim preceded most of our "
-            "wrong outcomes. We took move (a): a tighter return shape.")
+WEAK_STEP_READING = (
+    "The framework flags check_coverage as the candidate weak step. We "
+    "took move (a): a tighter return shape (required_document folded into "
+    "the same call; policy_id required so coverage against no policy is "
+    "impossible) rather than removing the tool. A fat or ambiguous "
+    "coverage observation both lowers s and raises T, because the agent "
+    "re-reads and re-asks; fixing the return attacks both."
+)
 
 ARITHMETIC_LIMITS = (
     "The arithmetic assumes steps are independent and similarly reliable, but this "
@@ -211,7 +212,8 @@ GOOD_RUN_STATEMENTS = [
     "1. Names the actual cause of the claim outcome and ties it to evidence from the system records.",
     "2. Produces a decision consistent with the policy, coverage, pre-authorisation, document, and claim records.",
     "3. Takes the gated external action at most once and only after the required facts have been established.",
-    "4. Requests missing evidence or escalates rather than inventing an answer when the records do not support a decision.",
+    "4. When the records cannot support a decision, escalates or requests "
+    "missing evidence rather than inventing an answer it does not know.",
     "5. Reaches the correct outcome with fewer unnecessary tool calls while preserving the same safety and evidence requirements.",
 ]
 

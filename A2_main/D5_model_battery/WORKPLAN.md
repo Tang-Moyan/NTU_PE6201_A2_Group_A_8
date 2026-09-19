@@ -11,9 +11,10 @@
 
 | 文件 | 是什么 | 你要动吗 |
 |---|---|---|
-| `backends.py` | **★ scripted / live 两个 backend**。唯一知道 vendor 的地方 | 有 1 个 TODO |
+| `backends.py` | **★ scripted / live 两个 backend**。唯一知道 vendor 的地方 | usage 已接好 |
 | `answers_D5.py` | **用户工作文件**：模型清单 + 价格 + 分歧解读 | **要** |
-| `battery.py` | 跑 scripted / live，出对比表 | 不用 |
+| `battery.py` | 跑 scripted / live；`A2_OWNER` 时写分片 | 不用 |
+| `merge_battery.py` | 把各人的 `D5_battery_<Owner>.json` 合成总表 | 不用 |
 | `test_D5.py` | 检查可复现性 + **vendor 中立性**（读源码） | 不用 |
 
 vendor-neutral 的三个字符串在 `A2_main/config.py`；
@@ -22,9 +23,11 @@ vendor-neutral 的三个字符串在 `A2_main/config.py`；
 ```bash
 python A2_main/D5_model_battery/test_D5.py       # 免费
 python A2_main/D5_model_battery/battery.py       # 免费，scripted
-# 花钱的那次：
-$env:A2_LIVE=1; $env:OPENROUTER_API_KEY="sk-or-..."
+# 每人只跑自己的模型（写 output/D5_battery_<Owner>.json，不覆盖别人）：
+$env:A2_LIVE=1; $env:A2_OWNER="Jojo"; $env:OPENROUTER_API_KEY="sk-or-..."
 python A2_main/D5_model_battery/battery.py
+# 全员推完分片后，合并成 D6 / 报告读的总表：
+python A2_main/D5_model_battery/merge_battery.py
 ```
 
 ---

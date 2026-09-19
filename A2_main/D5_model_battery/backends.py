@@ -78,9 +78,15 @@ class ScriptedBackend:
     # arithmetic has something to chew on. They are not measurements and
     # you must not report them as such - D6 wants MEASURED counts, which
     # means the live battery.
+    #
+    # Estimate from transcript CONTENT, not just turn count, so D7's
+    # fat_observation deletion is visible offline (a fat return is
+    # re-sent on every later turn).
     @staticmethod
     def token_estimate(transcript):
-        return 1800 + 600 * len(transcript), 120
+        from common import measure
+        body = "".join(str(e.get("content", "")) for e in transcript)
+        return 1800 + measure.approx_tokens(body), 120
 
 
 # =====================================================================

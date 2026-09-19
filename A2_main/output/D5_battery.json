@@ -1,93 +1,11 @@
 {
   "name": "D5_battery",
-  "written_at": "2026-09-07T16:19:47",
-  "written_by": "D5/battery.py",
+  "written_at": "2026-09-19T21:55:19",
+  "written_by": "cleanup",
   "payload": {
-    "scripted": {
-      "trials": 1,
-      "cases": 1,
-      "passed": 1,
-      "pass_rate": 1.0,
-      "negative_trials": 0,
-      "negative_pass_rate": null,
-      "median_turns": 4,
-      "max_turns": 4,
-      "hit_step_cap": 0,
-      "tokens_in": 21000,
-      "tokens_out": 600,
-      "cost_usd": 0.00234,
-      "by_family": {
-        "partly_payable": {
-          "trials": 1,
-          "passed": 1
-        }
-      },
-      "per_case": [
-        {
-          "case_id": "CLM-8842",
-          "trial": 1,
-          "turns": 4,
-          "passed": true,
-          "family": "partly_payable",
-          "negative": false
-        }
-      ],
-      "weak_step_candidates": [
-        [
-          "check_coverage",
-          0,
-          1,
-          0.0
-        ],
-        [
-          "get_claim",
-          0,
-          1,
-          0.0
-        ],
-        [
-          "get_preauthorisation",
-          0,
-          1,
-          0.0
-        ],
-        [
-          "issue_decision_letter",
-          0,
-          1,
-          0.0
-        ],
-        [
-          "lookup_hospital",
-          0,
-          1,
-          0.0
-        ],
-        [
-          "lookup_policy",
-          0,
-          1,
-          0.0
-        ]
-      ],
-      "unscripted_cases": [
-        "CLM-8850",
-        "CLM-8861",
-        "CLM-8874",
-        "CLM-8888",
-        "CLM-8894",
-        "CLM-8901",
-        "CLM-8910",
-        "CLM-8917",
-        "CLM-8925",
-        "CLM-8933",
-        "CLM-8941",
-        "CLM-8952",
-        "CLM-8960",
-        "CLM-8971"
-      ]
-    },
+    "scripted": null,
     "live": null,
-    "models_declared": 0
+    "models_declared": 5,
+    "note": "re-run battery.py (scripted) or merge_battery.py after shards exist"
   }
 }

@@ -4,6 +4,15 @@ D5 - THE MODEL BATTERY
     python A2_main/D5_model_battery/battery.py               # scripted, free
     A2_LIVE=1 python A2_main/D5_model_battery/battery.py     # COSTS MONEY
 
+    # One member, one model (recommended):
+    A2_LIVE=1 A2_OWNER=Jojo OPENROUTER_API_KEY=... \\
+        python A2_main/D5_model_battery/battery.py
+    # -> writes output/D5_battery_Jojo.json  (does not clobber others)
+
+    # After everyone has pushed their shard:
+    python A2_main/D5_model_battery/merge_battery.py
+    # -> writes output/D5_battery.json for D6 / the report
+
 TWO MODES, and the default is the free one on purpose.
 
   scripted   D5(a). Verifies a marker can clone the repository and
@@ -20,11 +29,8 @@ YOUR JOB at what cost, and where they diverge. Expect the divergence
 on the negative cases - that is the finding to look for, and it is why
 this script reports the negative-only pass rate separately.
 
-ON TOKEN COUNTS. The live backend in the scaffold returns zeros on
-purpose. Wire in the usage numbers the API gives you before you run
-the battery, or your D6 layer 1 will be an estimate wearing the label
-"measured", which is the mistake D6 punishes. This script warns when
-it sees a live run that reported zero tokens.
+ON TOKEN COUNTS. The live backend returns measured usage from OpenRouter.
+This script warns when it sees a live run report zero tokens.
 =====================================================================
 """
 import os
@@ -38,6 +44,7 @@ from common import fmt, store                                  # noqa: E402
 from common.template import is_filled                          # noqa: E402
 from D4_eval_set import eval_runner                            # noqa: E402
 from D5_model_battery import answers_D5 as A                   # noqa: E402
+from D5_model_battery import merge_battery                     # noqa: E402
 
 LIVE = os.environ.get("A2_LIVE") == "1"
 
@@ -128,9 +135,47 @@ def battery():
     return [run_live_model(m) for m in models]
 
 
+def _save_live_results(scripted, rows):
+    """Write per-owner shards; merge into D5_battery.json when possible.
+
+    With A2_OWNER set we only write that member's shard so a teammate's
+    merged file is never clobbered. Without it (full battery on one key)
+    we write every shard and refresh the merge.
+    """
+    by_owner = {}
+    for row in rows:
+        by_owner.setdefault(row.get("owner") or "unknown", []).append(row)
+
+    shard_paths = []
+    for owner, owner_rows in by_owner.items():
+        name = merge_battery.shard_name(owner)
+        path = store.save(
+            name,
+            {"scripted": scripted, "live": owner_rows,
+             "models_declared": len(owner_rows), "owner": owner},
+            source="D5/battery.py")
+        shard_paths.append(path)
+        print("  wrote shard  %s" % path)
+
+    if OWNER:
+        print()
+        print("  A2_OWNER=%r: left D5_battery.json alone so teammates'"
+              % OWNER)
+        print("  rows are not overwritten. After everyone pushes, run:")
+        print("      python A2_main/D5_model_battery/merge_battery.py")
+        return shard_paths
+
+    merged, _sources = merge_battery.merge_shards()
+    if merged is None:
+        merged = {"scripted": scripted, "live": rows,
+                  "models_declared": len(rows)}
+    path = store.save("D5_battery", merged, source="D5/battery.py")
+    print("  wrote merged  %s" % path)
+    return shard_paths
+
+
 # ---------------------------------------------------------------------
 def report():
-    import config
     fmt.h1("D5 - the model battery")
 
     # -- D5(a) --------------------------------------------------------
@@ -167,12 +212,16 @@ def report():
         for m in A.MODELS:
             print("      %-28s owner: %s" % (m.get("slug"), m.get("owner")))
         print()
-        print("  To run it:  set A2_LIVE=1 and OPENROUTER_API_KEY, then")
+        print("  To run YOUR model only:")
+        print('      $env:A2_LIVE="1"; $env:A2_OWNER="Jojo"')
+        print('      $env:OPENROUTER_API_KEY="sk-or-..."')
         print("      python A2_main/D5_model_battery/battery.py")
-        print("  Split the models across the team - one member, one model,")
-        print("  one key.")
+        print("  Then merge everyone's shards:")
+        print("      python A2_main/D5_model_battery/merge_battery.py")
         store.save("D5_battery", {"scripted": s, "live": None,
-                                  "models_declared": len(models)},
+                                  "models_declared": len(
+                                      [m for m in A.MODELS
+                                       if is_filled(m.get("slug"))])},
                    source="D5/battery.py")
         return s
 
@@ -190,19 +239,17 @@ def report():
     zero = [r["model"] for r in rows if r["tokens_in"] == 0]
     if zero:
         fmt.fail("these models reported ZERO input tokens: %s" % ", ".join(zero))
-        print("  The scaffold's live backend returns zeros on purpose. Wire")
-        print("  in the usage block the API returns before you trust any of")
-        print("  this - D6 needs MEASURED counts, and estimating while")
-        print("  calling it measured is what D6 punishes.")
+        print("  Live usage must come from the API response. Check")
+        print("  D5_model_battery/backends.py :: _live_call before trusting")
+        print("  D6 layer 1.")
+
+    _save_live_results(s, rows)
 
     fmt.h2("Where they diverged")
     fmt.paragraph(A.DIVERGENCE_FINDING)
     print()
     fmt.paragraph(A.WHICH_MODEL_WE_SHIP)
 
-    store.save("D5_battery", {"scripted": s, "live": rows,
-                              "models_declared": len(models)},
-               source="D5/battery.py")
     return rows
 
 

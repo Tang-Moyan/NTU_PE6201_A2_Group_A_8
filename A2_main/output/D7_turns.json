@@ -1,20 +1,22 @@
 {
   "name": "D7_turns",
-  "written_at": "2026-09-07T16:19:46",
+  "written_at": "2026-09-19T21:38:27",
   "written_by": "D7/failure_runs.py",
   "payload": {
-    "runs": 1,
-    "median_turns": 4,
-    "mean_turns": 4.0,
+    "runs": 81,
+    "median_turns": 3,
+    "mean_turns": 2.5925925925925926,
     "max_turns": 4,
-    "min_turns": 4,
+    "min_turns": 2,
     "worst_legitimate_turns": 4,
     "hit_step_cap": 0,
     "capped_cases": [],
     "step_cap": 8,
     "budget_ceiling": 60000,
     "histogram": {
-      "4": 1
+      "2": 39,
+      "3": 36,
+      "4": 6
     }
   }
 }

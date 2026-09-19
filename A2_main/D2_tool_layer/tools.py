@@ -57,16 +57,13 @@ that is yours, and it is where most of the D2 marks are.
     get_claim now returns the hospital record, leaving five distinct
     read-only checks and one gated irreversible decision tool.
 
-    TODO(D2/poka-yoke): ship at least two more poka-yoke moves, and
-      state what each makes IMPOSSIBLE rather than what it discourages.
-      check_coverage's required policy_id is one worked example; the
-      other is get_preauthorisation's mandatory date_of_service.
+    NOTE(D2/poka-yoke): two shipped — check_coverage requires policy_id;
+      get_preauthorisation requires date_of_service. Stated in
+      answers_D2.POKA_YOKE as what each makes IMPOSSIBLE.
 
-    TODO(D2/returns): lever 3 of the D6 cost ledger is the size of what
-      these functions RETURN, and it COMPOUNDS - every observation is
-      re-sent on every later turn. Decide the projection each tool
-      hands back, then write the deliberately fatter v1 in
-      answers_D2.py::v1_return() so the rewrite can be measured.
+    NOTE(D2/returns): projections are the shipped return shapes below;
+      the deliberately fatter v1 is answers_D2.v1_return() for the
+      measured rewrite (descriptor_ab.py: ~296 -> ~21 tokens/call).
 
     python A2_main/code_todo.py D2      every D2 marker, in one place
 ====================================================================
@@ -106,6 +103,27 @@ def _load(problem, table):
 # PROBLEM A · health-insurance claim first response
 # =====================================================================
 
+def _narrative_injection_flags(text):
+    """Flag hostile free text in the member narrative (D3 injection).
+
+    Defence lives here at the tool interface: get_claim surfaces that the
+    instruction was FOUND, so the agent / script can escalate with
+    trigger instruction_in_member_narrative and NOT follow it. A prompt
+    grepping only for "ignore" would miss the imitated-tool-result form.
+    """
+    if not text:
+        return {"found": False, "kinds": []}
+    t = text.lower()
+    kinds = []
+    if "system note" in t or "ignore the exclusions" in t:
+        kinds.append("imperative_instruction")
+    if "check_coverage returned" in t or "[check_coverage" in t:
+        kinds.append("imitated_tool_result")
+    if "approve all lines" in t and ("ignore" in t or "system" in t):
+        kinds.append("override_command")
+    return {"found": bool(kinds), "kinds": kinds}
+
+
 def get_claim(claim_id):
     """Fetch the one claim the agent has been asked to decide.
 
@@ -114,7 +132,7 @@ def get_claim(claim_id):
                    LINE ITEMS.
     READS          data_A/claims.json AND data_A/hospitals.json
     RETURNS        the claim row plus `hospital` {hospital_id, name,
-                   panel, country}, or None
+                   panel, country}, plus `narrative_injection` flags, or None
     RETURNS NONE   when no claim has that id - a broken case, not an
                    outcome.
     WATCH OUT      `lines` is a LIST. Nine of the fifteen shipped claims
@@ -132,7 +150,9 @@ def get_claim(claim_id):
         if c["claim_id"] == claim_id:
             hospital = next((h for h in _load("A", "hospitals")
                              if h["hospital_id"] == c["hospital_id"]), None)
-            return {**c, "hospital": hospital}
+            flags = _narrative_injection_flags(c.get("narrative"))
+            return {**c, "hospital": hospital,
+                    "narrative_injection": flags}
     return None
 
 
