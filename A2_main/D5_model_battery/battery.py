@@ -55,6 +55,18 @@ LIVE = os.environ.get("A2_LIVE") == "1"
 # Unset, behaviour is unchanged: every declared model runs.
 OWNER = os.environ.get("A2_OWNER") or None
 
+# Optional smoke only: A2_LIVE_LIMIT=N runs the first N labelled cases.
+# Unset / empty / 0 = full evaluation set (the default teammates should use).
+def _live_case_limit():
+    raw = os.environ.get("A2_LIVE_LIMIT", "").strip()
+    if not raw:
+        return 0
+    try:
+        n = int(raw)
+    except ValueError:
+        return 0
+    return 0 if n <= 0 else n
+
 
 # ---------------------------------------------------------------------
 # D5(a) - the reproducible scripted run
@@ -88,13 +100,25 @@ def live_models():
     return ms
 
 
-def _count_planned_trials():
+def _count_planned_trials(case_ids=None):
     """How many agent runs one live model will do (ordinary 1x, negatives 3x)."""
     cases, _ = eval_runner.runnable_cases(every=True)
+    if case_ids is not None:
+        want = set(case_ids)
+        cases = [c for c in cases if c in want]
     import config
     from D4_eval_set.harness import load_key
     key = load_key(config.PROBLEM)
     return sum(eval_runner.trials_for(key[cid]) for cid in cases)
+
+
+def _live_case_ids():
+    """Full labelled set; truncated only when A2_LIVE_LIMIT is set."""
+    cases, _ = eval_runner.runnable_cases(every=True)
+    limit = _live_case_limit()
+    if limit and len(cases) > limit:
+        return cases[:limit]
+    return cases
 
 
 def _progress_bar(done, total, width=28):
@@ -152,6 +176,7 @@ def run_live_model(model):
     """Run the whole set against one model. Restores config afterwards."""
     import config
     saved = (config.BACKEND, config.MODEL, config.PRICE_IN, config.PRICE_OUT)
+    limit = _live_case_limit()
     try:
         config.BACKEND = "live"
         config.MODEL = model["slug"]
@@ -159,14 +184,18 @@ def run_live_model(model):
             config.PRICE_IN = float(model["price_in"])
         if is_filled(model.get("price_out")):
             config.PRICE_OUT = float(model["price_out"])
-        planned = _count_planned_trials()
+        case_ids = _live_case_ids()
+        planned = _count_planned_trials(case_ids)
         print()
+        if limit:
+            print("  A2_LIVE_LIMIT=%d: first %d cases only (smoke)"
+                  % (limit, len(case_ids)))
         print("  planned trials for this model: %d "
               "(~%d API calls if median 4 turns)"
               % (planned, planned * 4))
         on_progress = _make_progress_printer(model["slug"])
         results, _queue, _unscripted = eval_runner.run(
-            every=True, on_progress=on_progress)
+            every=True, case_ids=case_ids, on_progress=on_progress)
         summary = eval_runner.summarise(results)
     finally:
         (config.BACKEND, config.MODEL,
@@ -174,6 +203,8 @@ def run_live_model(model):
     summary["model"] = model["slug"]
     summary["owner"] = model.get("owner")
     summary["tier"] = model.get("tier")
+    if limit:
+        summary["smoke_case_limit"] = limit
     return summary
 
 

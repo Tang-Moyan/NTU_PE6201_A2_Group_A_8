@@ -65,12 +65,15 @@ def runnable_cases(every=False):
     return have, [c for c in cases if c not in scripts.SCRIPTS]
 
 
-def run(every=False, on_progress=None):
+def run(every=False, on_progress=None, case_ids=None):
     """Run the evaluation set.
 
     `on_progress`, if given, is called as
         on_progress(done, total, case_id, trial, trials_for_case, record)
     after every trial. Used by the live battery progress bar.
+
+    `case_ids`, if given, restricts the run to that ordered subset
+    (still present in the answer key). Optional; default is the full set.
     """
     import config
     from D1_agent_loop.agent import run_case
@@ -79,6 +82,12 @@ def run(every=False, on_progress=None):
 
     key = load_key(config.PROBLEM)
     cases, unscripted = runnable_cases(every)
+    if case_ids is not None:
+        want = set(case_ids)
+        missing = [c for c in case_ids if c not in key]
+        if missing:
+            raise SystemExit("unknown case_ids: %s" % ", ".join(missing))
+        cases = [c for c in case_ids if c in want and c in key]
     results, queue = [], []
 
     plan = [(cid, trials_for(key[cid])) for cid in cases]

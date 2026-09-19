@@ -41,8 +41,8 @@ FRESH_CLONE_TESTED = TEMPLATE(
 MODELS = [
     {"slug": "google/gemini-3.8-flash",      "owner": "Jojo",
      "price_in": 0.75,  "price_out": 3.75,  "tier": "mid"},
-    {"slug": "minimax/minimax-m2.7",           "owner": "Moyan",
-     "price_in": 0.30,  "price_out": 1.20,  "tier": "cheap"},
+    {"slug": "openai/gpt-4o-mini",            "owner": "Moyan",
+     "price_in": 0.15,  "price_out": 0.60,  "tier": "cheap"},
     {"slug": "~openai/gpt-luna-latest",      "owner": "Ziyu",
      "price_in": 0.20,  "price_out": 1.20,  "tier": "cheap"},
     {"slug": "x-ai/grok-4.6",                "owner": "Xianer",

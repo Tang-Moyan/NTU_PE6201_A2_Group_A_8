@@ -26,6 +26,8 @@ moves is how you test the parts you wrote.
 ====================================================================
 """
 import json
+import urllib.error
+import urllib.parse
 import urllib.request
 
 import config
@@ -106,24 +108,38 @@ class LiveBackend:
         # per-call counts, not a running sum.
         self._last_prompt_tokens = 0
         self._last_completion_tokens = 0
+        self._last_usage_estimated = False
 
     def next_move(self, transcript):
-        messages = [{"role": "system", "content": self.system_prompt}]
+        # The harness passes case_id into this backend, but the model only
+        # sees `messages`. Descriptors say "the case id you were given" —
+        # without this user turn the live model invents an id (seen:
+        # CLM-2024-0892) and every trial escalates / duplicate-loops.
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user",
+             "content": (
+                 "Process claim_id %s. "
+                 "Call get_claim with exactly this claim_id first. "
+                 "Reply with JSON only, using the shapes in the system prompt."
+                 % self.case_id
+             )},
+        ]
         for entry in transcript:
             messages.append({"role": entry["role"], "content": entry["content"]})
         raw, usage = _live_call(messages)
         self._last_prompt_tokens = int(usage.get("prompt_tokens") or 0)
         self._last_completion_tokens = int(usage.get("completion_tokens") or 0)
+        self._last_usage_estimated = bool(usage.get("estimated"))
         return _parse_move(raw)
 
     def token_estimate(self, transcript):
-        """Measured usage from the last OpenRouter call (not an estimate).
+        """Token counts for the last OpenRouter call.
 
-        OpenRouter mirrors OpenAI's usage block:
-            prompt_tokens / completion_tokens
-        On reasoning models, thinking tokens are already inside
-        completion_tokens — that is how you notice them.
-        `transcript` is unused; the API counted the real request.
+        Prefer measured usage (prompt_tokens / completion_tokens). Some
+        providers omit the usage block; then these are approx_tokens
+        estimates and `_last_usage_estimated` is True.
+        `transcript` is unused when the API counted the real request.
         """
         return self._last_prompt_tokens, self._last_completion_tokens
 
@@ -144,12 +160,14 @@ def _parse_move(text):
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         text = "\n".join(lines).strip()
-    try:
-        move = json.loads(text)
-    except json.JSONDecodeError:
+    move = _loads_move_json(text)
+    if move is None:
         return {"final": {"decision": "escalate",
                           "reason": "model did not return parseable JSON"},
                 "thought": "unparseable: %s" % text[:200]}
+    if isinstance(move, list) and len(move) == 1 and isinstance(move[0], dict):
+        # MiniMax occasionally wraps the move in a one-element array.
+        move = move[0]
     if not isinstance(move, dict):
         return {"final": {"decision": "escalate",
                           "reason": "model JSON was not an object"},
@@ -177,6 +195,29 @@ def _parse_move(text):
     return {"final": {"decision": "escalate",
                       "reason": "model JSON had neither final nor tool calls"},
             "thought": move.get("thought") or ("malformed: %s" % text[:200])}
+
+
+def _loads_move_json(text):
+    """Parse a move object; tolerate prose wrapping a JSON object."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start >= 0 and end > start:
+        try:
+            return json.loads(text[start:end + 1])
+        except json.JSONDecodeError:
+            return None
+    start = text.find("[")
+    end = text.rfind("]")
+    if start >= 0 and end > start:
+        try:
+            return json.loads(text[start:end + 1])
+        except json.JSONDecodeError:
+            return None
+    return None
 
 
 def _message_text(message):
@@ -239,13 +280,20 @@ def _live_call(messages):
         "model": config.MODEL,
         "messages": messages,
         "temperature": 0,
+        # Ask OpenRouter to always include usage when the provider supports it.
+        "usage": {"include": True},
     }
     # Ask for JSON when the model supports it. Providers that reject
     # response_format will 400 - fall back without it below.
     body_with_json = dict(body, response_format={"type": "json_object"})
     payload = _openrouter_post(body_with_json)
     if payload is None:
+        # Retry without response_format, still asking for usage.
         payload = _openrouter_post(body)
+    if payload is None:
+        # Last resort: some models reject the usage include flag too.
+        bare = {"model": config.MODEL, "messages": messages, "temperature": 0}
+        payload = _openrouter_post(bare)
     if payload is None:
         raise SystemExit(
             "\n  OpenRouter call failed for model %r.\n"
@@ -265,18 +313,117 @@ def _live_call(messages):
                           "(finish_reason=%r)" % choice0.get("finish_reason"),
             },
         })
-    usage = payload.get("usage") or {}
-    if not usage.get("prompt_tokens"):
-        raise SystemExit(
-            "\n  OpenRouter returned no usage.prompt_tokens.\n"
-            "  Live battery / D6 need measured counts; refusing to report "
-            "zeros as measured.\n  Full usage block: %r\n" % usage)
+
+    usage = _resolve_usage(payload, messages, content)
     return content, usage
+
+
+def _resolve_usage(payload, messages, content):
+    """Build a prompt/completion token pair, never aborting the battery.
+
+    Some providers (seen with MiniMax via OpenRouter) return `usage: {}`
+    on the chat response. Prefer, in order:
+      1. usage block on the chat payload (incl. alternate key names)
+      2. GET /generation?id=... metadata (tokens_prompt / native_*)
+      3. local approx_tokens fallback, flagged estimated=True
+    """
+    usage = _coerce_usage(payload.get("usage"))
+    if usage.get("prompt_tokens"):
+        return usage
+
+    gen_id = payload.get("id")
+    if gen_id:
+        fetched = _fetch_generation_usage(gen_id)
+        if fetched.get("prompt_tokens"):
+            return fetched
+
+    # Fallback: do not kill an 80-trial battery because one provider
+    # omitted usage. Label the estimate so D6 can stay honest.
+    from common import measure
+    prompt_text = json.dumps(messages, ensure_ascii=False, default=str)
+    approx_in = max(1, measure.approx_tokens(prompt_text))
+    approx_out = max(1, measure.approx_tokens(content or ""))
+    if not getattr(_resolve_usage, "_warned", False):
+        print()
+        print("  WARNING: OpenRouter returned no usage for model %r "
+              "(chat usage=%r, generation id=%r)."
+              % (config.MODEL, payload.get("usage"), gen_id))
+        print("  Falling back to approx_tokens for this run; tag the "
+              "battery cost as ESTIMATED in D6 if this persists.")
+        print()
+        _resolve_usage._warned = True
+    return {"prompt_tokens": approx_in,
+            "completion_tokens": approx_out,
+            "estimated": True}
+
+
+def _coerce_usage(usage):
+    """Normalise OpenRouter / OpenAI / Anthropic-shaped usage dicts."""
+    if not isinstance(usage, dict):
+        return {}
+    prompt = (usage.get("prompt_tokens")
+              or usage.get("input_tokens")
+              or usage.get("tokens_prompt")
+              or usage.get("native_tokens_prompt")
+              or 0)
+    completion = (usage.get("completion_tokens")
+                  or usage.get("output_tokens")
+                  or usage.get("tokens_completion")
+                  or usage.get("native_tokens_completion")
+                  or 0)
+    # Reasoning tokens, when billed separately, still count as output.
+    reasoning = (usage.get("reasoning_tokens")
+                 or usage.get("native_tokens_reasoning")
+                 or 0)
+    try:
+        prompt = int(prompt or 0)
+        completion = int(completion or 0) + int(reasoning or 0)
+    except (TypeError, ValueError):
+        return {}
+    if prompt <= 0 and completion <= 0:
+        return {}
+    out = {"prompt_tokens": prompt, "completion_tokens": completion}
+    if usage.get("total_tokens"):
+        out["total_tokens"] = usage["total_tokens"]
+    return out
+
+
+def _fetch_generation_usage(gen_id):
+    """OpenRouter sometimes fills usage only on GET /generation?id=..."""
+    import time
+    url = (config.BASE_URL.rstrip("/") + "/generation?id="
+           + urllib.parse.quote(str(gen_id), safe=""))
+    # Usage can lag a moment behind the chat response.
+    for delay in (0.0, 0.4, 1.0):
+        if delay:
+            time.sleep(delay)
+        req = urllib.request.Request(
+            url,
+            headers={"Authorization": "Bearer " + config.API_KEY,
+                     "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                payload = json.load(r)
+        except Exception:                                  # noqa: BLE001
+            continue
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, dict):
+            continue
+        coerced = _coerce_usage({
+            "prompt_tokens": data.get("tokens_prompt")
+                             or data.get("native_tokens_prompt"),
+            "completion_tokens": data.get("tokens_completion")
+                                 or data.get("native_tokens_completion"),
+            "reasoning_tokens": data.get("native_tokens_reasoning"),
+        })
+        if coerced.get("prompt_tokens"):
+            return coerced
+    return {}
 
 
 def _openrouter_post(body):
     """POST /chat/completions. Returns payload dict, or None on HTTP 400
-    that looks like an unsupported response_format (so the caller can
+    that looks like an unsupported optional field (so the caller can
     retry). Other errors still raise."""
     data = json.dumps(body).encode()
     req = urllib.request.Request(
@@ -289,7 +436,9 @@ def _openrouter_post(body):
             return json.load(r)
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        if exc.code == 400 and "response_format" in detail.lower():
+        # Soft-retry triggers: optional request fields this model rejects.
+        soft = ("response_format", "usage")
+        if exc.code == 400 and any(s in detail.lower() for s in soft):
             return None
         raise SystemExit(
             "\n  OpenRouter HTTP %s for model %r.\n  %s\n"

@@ -398,10 +398,13 @@ DESCRIPTORS = {
                    "annual_limit, used_to_date, exclusions[]}, remaining: int}",
         "failure": "Returns None when the member or policy does not exist. "
                    "USE `remaining`, not annual_limit - it is the limit minus "
-                   "what is already spent. Three separate escalation reasons "
-                   "live here: lapsed status, a date of service outside "
-                   "start_date..end_date EVEN IF status is active, and lines "
-                   "exceeding `remaining`.",
+                   "what is already spent. Date rule: escalate for dates ONLY "
+                   "if date_of_service < start_date OR date_of_service > "
+                   "end_date (both bounds inclusive). If status is active and "
+                   "the date is in range, keep investigating - do not stop. "
+                   "Three separate escalation reasons live here: lapsed "
+                   "status, a date of service outside start_date..end_date "
+                   "EVEN IF status is active, and lines exceeding `remaining`.",
     },
     "check_coverage": {
         "name": "check_coverage",
