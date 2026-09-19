@@ -124,10 +124,7 @@ LEVERS = {
     1: {"what": "Tool block size (B) - re-sent every turn, called or not",
         "built_in": "D2(a)",
         "before": 1167,   # tool_block_tokens, output/D2_tool_audit.json
-        "after": TEMPLATE("砍完之后的 tool block token 数 - re-run "
-                          "A2_main/D2_tool_layer/tool_audit.py first; "
-                          "output/D2_tool_audit.json still shows the "
-                          "pre-cut seven-tool figure"),
+        "after": 1098,    # six tools, measured after cutting lookup_hospital
         "note": ("We cut lookup_hospital. CLM-8874 uses a non-panel hospital "
                  "(H-330) and still expects approve_in_principle, so panel "
                  "status changes what the record must SAY, not what the "
@@ -137,15 +134,15 @@ LEVERS = {
                  "instead of eight.")},
     2: {"what": "Turn count (T) - the quadratic term, the biggest lever",
         "built_in": "D2(c)",
-        "before": "8 turns / 59,400 input tokens",
-        "after": "4 turns / 21,000 input tokens",
+        "before": "153 turns / 918,000 input tokens (31 cases)",
+        "after": "92 turns / 447,000 input tokens (31 cases)",
         "note": ("Coverage, hospital and document checks for the three lines "
                  "are independent of one another, so they share one turn. "
                  "The pre-authorisation lookup cannot move: it depends on "
                  "first learning that a procedure requires one. The "
-                 "sequential arm also breached the budget ceiling at 60,480 "
-                 "tokens and was halted, so the saving is 64.6% of input "
-                 "tokens AND the difference between a result and none.")},
+                 "sequential arm also breached the budget ceiling and was "
+                 "halted on one case, so the saving is 51.3% of input tokens "
+                 "AND a pass rate of 100% against 96.8%.")},
     3: {"what": "Observation size (D) - compounds across later turns",
         "built_in": "D2(b)",
         "before": TEMPLATE("v1 每次调用返回的 token 数"),
@@ -160,14 +157,16 @@ LEVERS = {
 
 DOMINANT_LEVER = (
     "Lever 4, the success rate, and it is not close. At our measured token "
-    "counts layer 2 is 42x layer 1 - US$0.76 of expected fallback against "
-    "US$0.018 of tokens per task - so at 4,000 tasks a month the entire "
-    "token bill is US$72 while one point of pass rate is worth about US$30. "
-    "That is how we know: the ratio, not an opinion. Lever 2 is the largest "
-    "of the three token levers and worth pulling (64.6% of input tokens, and "
-    "the sequential arm breached the budget ceiling), but all three token "
-    "levers together move under 3% of the bill. A team that optimised tokens "
-    "and left the pass rate alone would have worked on the wrong problem.")
+    "counts one run costs US$0.0115 in tokens while one failure costs "
+    "US$7.60 in assessor time - 661x. At 8,000 claims a month the entire "
+    "token bill is US$92, so a single point of pass rate is worth about "
+    "US$61, two thirds of the whole token spend. That is how we know: the "
+    "ratio between a run and a failure, not an opinion. Lever 2 is the "
+    "largest of the three token levers and worth pulling - 51.3% of input "
+    "tokens across 31 cases, and the sequential arm breached the budget "
+    "ceiling and lost a case - but all three token levers together move a "
+    "few percent of the bill. A team that optimised tokens and left the "
+    "pass rate alone would have worked on the wrong problem.")
 
 
 # =====================================================================
