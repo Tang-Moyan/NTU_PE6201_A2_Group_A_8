@@ -127,10 +127,43 @@ def run_case(case_id, problem=None, approve=None, verbose=False):
             #   in the loop as well, this is the line to add it on, and
             #   the trade-off (a loud stop vs a silently wasted call) is
             #   worth a sentence in the report.
-            calls = move.get("calls") or [(move["tool"], move["args"])]
+            calls = _calls_from_move(move)
+            if not calls:
+                # Live models sometimes return {"thought": "..."} with no
+                # action. Treat as a loud escalate, not a KeyError.
+                record = {
+                    "decision": "escalate",
+                    "reason": "model returned neither a final decision nor "
+                              "any tool calls",
+                    "thought": move.get("thought", ""),
+                }
+                break
             observations = []
+            known = tools.REGISTRY.get(problem) or {}
 
             for name, args in calls:
+                if name not in known:
+                    # Live models sometimes parrot schema words ("string")
+                    # as a tool name. Feed the error back; do not crash
+                    # the whole battery.
+                    observations.append({
+                        "tool": name,
+                        "args": args,
+                        "observation": {
+                            "error": "unknown_tool",
+                            "detail": (
+                                "%r is not a tool. Available: %s"
+                                % (name, ", ".join(sorted(known)))
+                            ),
+                        },
+                    })
+                    if verbose:
+                        print("       %-26s -> unknown tool" % name)
+                    continue
+
+                if not isinstance(args, dict):
+                    args = {}
+
                 guards.check_duplicate(name, args)
 
                 # THE GATE goes in front of the irreversible step only.
@@ -141,12 +174,24 @@ def run_case(case_id, problem=None, approve=None, verbose=False):
                             "%s awaits human approval (autonomy=%s)"
                             % (name, config.AUTONOMY))
 
-                result = tools.call(problem, name, args)
+                try:
+                    result = tools.call(problem, name, args)
+                except TypeError as exc:
+                    result = {"error": "bad_args", "detail": str(exc)}
                 evidence.append(name)
                 observations.append({"tool": name, "args": args,
                                      "observation": result})
                 if verbose:
                     print("       %-26s -> %s" % (name, _short(result)))
+
+            if not observations:
+                record = {
+                    "decision": "escalate",
+                    "reason": "model tool calls were all invalid "
+                              "(e.g. schema placeholder names)",
+                    "thought": move.get("thought", ""),
+                }
+                break
 
             transcript.append({"role": "assistant",
                                "content": move.get("thought", "")})
@@ -176,6 +221,27 @@ def run_case(case_id, problem=None, approve=None, verbose=False):
         "backend": backend.name,
     })
     return record
+
+
+def _calls_from_move(move):
+    """Return [(tool, args), ...] or None if the move has no actionable call.
+
+    Accepts the multi-call shape (`calls`) and the single-call shape
+    (`tool` / `args`). An empty or missing action list is None, not [].
+    """
+    calls = move.get("calls")
+    if isinstance(calls, list) and calls:
+        out = tools.normalise_tool_calls(calls)
+        if out:
+            return out
+    if move.get("tool") or move.get("name"):
+        pair = tools._normalise_one_call({
+            "tool": move.get("tool") or move.get("name"),
+            "args": move.get("args") or move.get("arguments"),
+        })
+        if pair is not None:
+            return [pair]
+    return None
 
 
 def _short(value, n=64):

@@ -131,12 +131,92 @@ class LiveBackend:
 def _parse_move(text):
     """The model must answer in JSON. Anything else is a run you cannot
     grade, so say so loudly rather than guessing."""
+    if text is None or not str(text).strip():
+        return {"final": {"decision": "escalate",
+                          "reason": "model returned empty content"},
+                "thought": "empty model response"}
+    text = str(text).strip()
+    # Models often wrap JSON in ```json ... ``` despite instructions.
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
     try:
-        return json.loads(text)
+        move = json.loads(text)
     except json.JSONDecodeError:
         return {"final": {"decision": "escalate",
                           "reason": "model did not return parseable JSON"},
                 "thought": "unparseable: %s" % text[:200]}
+    if not isinstance(move, dict):
+        return {"final": {"decision": "escalate",
+                          "reason": "model JSON was not an object"},
+                "thought": "unparseable: %s" % text[:200]}
+    # Prompt shows calls as [["name", {...}]]; agent expects (name, args).
+    # Live models often parrot schema placeholders ("string") — drop them.
+    from D2_tool_layer import tools as _tools
+    if isinstance(move.get("calls"), list):
+        move["calls"] = _tools.normalise_tool_calls(move["calls"])
+
+    if "final" in move:
+        return move
+    if move.get("calls"):
+        return move
+    if "tool" in move or "name" in move:
+        pair = _tools._normalise_one_call({
+            "tool": move.get("tool") or move.get("name"),
+            "args": move.get("args") or move.get("arguments"),
+        })
+        if pair is not None:
+            move["calls"] = [pair]
+            return move
+    # Valid JSON but neither a conclusion nor a tool call - common when a
+    # model only returns {"thought": "..."}. Escalate loudly; do not KeyError.
+    return {"final": {"decision": "escalate",
+                      "reason": "model JSON had neither final nor tool calls"},
+            "thought": move.get("thought") or ("malformed: %s" % text[:200])}
+
+
+def _message_text(message):
+    """Pull a usable string out of an OpenRouter/OpenAI message object.
+
+    Some models return content=null (refusal, reasoning-only, or a
+    multipart payload). Treat that as empty rather than crashing.
+    """
+    if not isinstance(message, dict):
+        return None
+    content = message.get("content")
+    if isinstance(content, str) and content.strip():
+        return content
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str) and part.strip():
+                parts.append(part)
+            elif isinstance(part, dict):
+                text = part.get("text") or part.get("content")
+                if isinstance(text, str) and text.strip():
+                    parts.append(text)
+        if parts:
+            return "\n".join(parts)
+    for key in ("reasoning", "reasoning_content"):
+        val = message.get(key)
+        if isinstance(val, str) and val.strip():
+            # Reasoning text is not the JSON move, but better diagnostics
+            # than None; _parse_move will escalate as unparseable.
+            return val
+    refusal = message.get("refusal")
+    if isinstance(refusal, str) and refusal.strip():
+        return json.dumps({
+            "thought": "model refused",
+            "final": {
+                "decision": "escalate",
+                "reason": "model refusal: %s" % refusal[:300],
+            },
+        })
+    return None
 
 
 def _live_call(messages):
@@ -147,26 +227,44 @@ def _live_call(messages):
     BASE_URL in config.py. Nothing else.
 
     Returns (content, usage) where usage is the OpenRouter/OpenAI-shaped
-    dict with prompt_tokens and completion_tokens.
+    dict with prompt_tokens and completion_tokens. `content` may be an
+    empty string when the provider returned null - never None.
     """
     if not config.API_KEY:
         raise SystemExit(
             "\n  BACKEND is 'live' but OPENROUTER_API_KEY is not set.\n"
             "    export OPENROUTER_API_KEY='sk-or-...'\n"
             "  Or set BACKEND = 'scripted' in config.py, which is free.\n")
-    body = json.dumps({
+    body = {
         "model": config.MODEL,
         "messages": messages,
         "temperature": 0,
-    }).encode()
-    req = urllib.request.Request(
-        config.BASE_URL.rstrip("/") + "/chat/completions",
-        data=body,
-        headers={"Authorization": "Bearer " + config.API_KEY,
-                 "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        payload = json.load(r)
-    content = payload["choices"][0]["message"]["content"]
+    }
+    # Ask for JSON when the model supports it. Providers that reject
+    # response_format will 400 - fall back without it below.
+    body_with_json = dict(body, response_format={"type": "json_object"})
+    payload = _openrouter_post(body_with_json)
+    if payload is None:
+        payload = _openrouter_post(body)
+    if payload is None:
+        raise SystemExit(
+            "\n  OpenRouter call failed for model %r.\n"
+            "  Check the model slug in answers_D5.MODELS and your key.\n"
+            % config.MODEL)
+
+    choice0 = (payload.get("choices") or [{}])[0]
+    message = choice0.get("message") or {}
+    content = _message_text(message)
+    if content is None:
+        # Loud, gradable failure instead of TypeError in json.loads.
+        content = json.dumps({
+            "thought": "empty provider content",
+            "final": {
+                "decision": "escalate",
+                "reason": "model returned no message content "
+                          "(finish_reason=%r)" % choice0.get("finish_reason"),
+            },
+        })
     usage = payload.get("usage") or {}
     if not usage.get("prompt_tokens"):
         raise SystemExit(
@@ -176,6 +274,28 @@ def _live_call(messages):
     return content, usage
 
 
+def _openrouter_post(body):
+    """POST /chat/completions. Returns payload dict, or None on HTTP 400
+    that looks like an unsupported response_format (so the caller can
+    retry). Other errors still raise."""
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(
+        config.BASE_URL.rstrip("/") + "/chat/completions",
+        data=data,
+        headers={"Authorization": "Bearer " + config.API_KEY,
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        if exc.code == 400 and "response_format" in detail.lower():
+            return None
+        raise SystemExit(
+            "\n  OpenRouter HTTP %s for model %r.\n  %s\n"
+            % (exc.code, body.get("model"), detail[:800]))
+
+
 def make_backend(case_id, tool_descriptors=None, system_prompt=""):
     if config.BACKEND == "scripted":
         return ScriptedBackend(case_id)
@@ -183,3 +303,4 @@ def make_backend(case_id, tool_descriptors=None, system_prompt=""):
         return LiveBackend(case_id, tool_descriptors or [], system_prompt)
     raise SystemExit("BACKEND must be 'scripted' or 'live', not %r"
                      % config.BACKEND)
+

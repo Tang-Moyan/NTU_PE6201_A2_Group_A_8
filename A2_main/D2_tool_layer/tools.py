@@ -492,4 +492,80 @@ def call(problem, name, args):
         raise KeyError(
             "No tool named %r for Problem %s. Available: %s"
             % (name, problem, ", ".join(sorted(table))))
+    if not isinstance(args, dict):
+        raise TypeError(
+            "tool %r args must be a dict, got %s" % (name, type(args).__name__))
     return table[name](**args)
+
+
+# JSON-schema type words models sometimes emit as a "tool name" when they
+# parrot the prompt's [["tool_name", {"arg": "value"}]] example too
+# literally (seen live: tool named "string").
+_SCHEMA_TYPE_WORDS = frozenset({
+    "string", "str", "number", "integer", "int", "float", "object",
+    "array", "list", "dict", "boolean", "bool", "null", "any", "value",
+    "tool_name", "name", "arg", "args",
+})
+
+
+def normalise_tool_calls(raw_calls):
+    """Turn a model-supplied `calls` value into [(name, args_dict), ...].
+
+    Drops schema placeholders (tool name "string") and unrecoverable
+    shapes. Never raises.
+    """
+    if not isinstance(raw_calls, list):
+        return []
+    out = []
+    for item in raw_calls:
+        pair = _normalise_one_call(item)
+        if pair is not None:
+            out.append(pair)
+    return out
+
+
+def _normalise_one_call(item):
+    name, args = None, None
+
+    if isinstance(item, (list, tuple)) and len(item) >= 2:
+        a, b = item[0], item[1]
+        if isinstance(a, str) and isinstance(b, dict):
+            name, args = a, b
+        elif isinstance(a, dict) and isinstance(b, str):
+            name, args = b, a
+        elif isinstance(a, str) and isinstance(b, str):
+            # ["get_claim", "{...}"] or ["string", "get_claim"]
+            if a.lower() in _SCHEMA_TYPE_WORDS and b.lower() not in _SCHEMA_TYPE_WORDS:
+                name, args = b, {}
+            else:
+                name, args = a, _args_from_maybe_json(b)
+        elif isinstance(a, str):
+            name, args = a, _args_from_maybe_json(b)
+    elif isinstance(item, dict):
+        if "tool" in item or "name" in item:
+            name = item.get("tool") or item.get("name")
+            args = item.get("args") if "args" in item else item.get("arguments")
+        elif len(item) == 1:
+            name, args = next(iter(item.items()))
+
+    if not isinstance(name, str) or not name.strip():
+        return None
+    name = name.strip()
+    if name.lower() in _SCHEMA_TYPE_WORDS:
+        return None
+    args = _args_from_maybe_json(args)
+    return (name, args)
+
+
+def _args_from_maybe_json(args):
+    if args is None:
+        return {}
+    if isinstance(args, dict):
+        return args
+    if isinstance(args, str):
+        try:
+            parsed = json.loads(args)
+        except (TypeError, ValueError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}

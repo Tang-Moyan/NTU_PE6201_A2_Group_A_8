@@ -88,6 +88,66 @@ def live_models():
     return ms
 
 
+def _count_planned_trials():
+    """How many agent runs one live model will do (ordinary 1x, negatives 3x)."""
+    cases, _ = eval_runner.runnable_cases(every=True)
+    import config
+    from D4_eval_set.harness import load_key
+    key = load_key(config.PROBLEM)
+    return sum(eval_runner.trials_for(key[cid]) for cid in cases)
+
+
+def _progress_bar(done, total, width=28):
+    if total <= 0:
+        return "[" + ("-" * width) + "]"
+    filled = int(width * done / total)
+    return "[" + ("#" * filled) + ("-" * (width - filled)) + "]"
+
+
+def _fmt_secs(seconds):
+    seconds = max(0, int(seconds))
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    if h:
+        return "%dh%02dm%02ds" % (h, m, s)
+    if m:
+        return "%dm%02ds" % (m, s)
+    return "%ds" % s
+
+
+def _make_progress_printer(model_slug):
+    """Return an on_progress callback that redraws one status line."""
+    import time
+    started = time.time()
+    print("  live model  %s" % model_slug)
+    print("  each trial is a full agent loop (several OpenRouter calls).")
+    print("  15-40 min per model is normal; 17 min with no output was the")
+    print("  old silent runner, not necessarily a hang.")
+    print()
+
+    def on_progress(done, total, case_id, trial, trials_for_case, record):
+        elapsed = time.time() - started
+        rate = done / elapsed if elapsed > 0 else 0
+        eta = (total - done) / rate if rate > 0 else 0
+        decision = record.get("decision") or "?"
+        stopped = record.get("stopped_by") or "-"
+        line = (
+            "  %s %3d/%d  %s  trial %d/%d  %s  stop=%s  "
+            "elapsed %s  eta %s   "
+            % (_progress_bar(done, total), done, total, case_id,
+               trial, trials_for_case, decision, stopped,
+               _fmt_secs(elapsed), _fmt_secs(eta))
+        )
+        # Carriage return keeps one updating line in most terminals.
+        sys.stdout.write("\r" + line)
+        sys.stdout.flush()
+        if done >= total:
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+
+    return on_progress
+
+
 def run_live_model(model):
     """Run the whole set against one model. Restores config afterwards."""
     import config
@@ -99,7 +159,14 @@ def run_live_model(model):
             config.PRICE_IN = float(model["price_in"])
         if is_filled(model.get("price_out")):
             config.PRICE_OUT = float(model["price_out"])
-        results, _queue, _unscripted = eval_runner.run(every=True)
+        planned = _count_planned_trials()
+        print()
+        print("  planned trials for this model: %d "
+              "(~%d API calls if median 4 turns)"
+              % (planned, planned * 4))
+        on_progress = _make_progress_printer(model["slug"])
+        results, _queue, _unscripted = eval_runner.run(
+            every=True, on_progress=on_progress)
         summary = eval_runner.summarise(results)
     finally:
         (config.BACKEND, config.MODEL,
@@ -132,6 +199,14 @@ def battery():
         raise SystemExit(
             "\n  D5(b) needs at least three models; answers_D5.MODELS has "
             "%d filled in.\n" % len(models))
+    if not OWNER and len(models) > 1:
+        print()
+        print("  WARNING: A2_OWNER is unset — running %d models back-to-back."
+              % len(models))
+        print("  Expect roughly %d–%d minutes total. Prefer:"
+              % (15 * len(models), 40 * len(models)))
+        print('    $env:A2_OWNER="YourName"')
+        print()
     return [run_live_model(m) for m in models]
 
 

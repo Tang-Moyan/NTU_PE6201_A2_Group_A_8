@@ -65,7 +65,13 @@ def runnable_cases(every=False):
     return have, [c for c in cases if c not in scripts.SCRIPTS]
 
 
-def run(every=False):
+def run(every=False, on_progress=None):
+    """Run the evaluation set.
+
+    `on_progress`, if given, is called as
+        on_progress(done, total, case_id, trial, trials_for_case, record)
+    after every trial. Used by the live battery progress bar.
+    """
     import config
     from D1_agent_loop.agent import run_case
     from D4_eval_set.harness import (code_check, load_key,
@@ -75,9 +81,13 @@ def run(every=False):
     cases, unscripted = runnable_cases(every)
     results, queue = [], []
 
-    for cid in cases:
+    plan = [(cid, trials_for(key[cid])) for cid in cases]
+    total = sum(n for _cid, n in plan)
+    done = 0
+
+    for cid, n_trials in plan:
         expected = key[cid]
-        for trial in range(1, trials_for(expected) + 1):
+        for trial in range(1, n_trials + 1):
             record = run_case(cid, problem=config.PROBLEM)
             passed, fails = code_check(record, expected)
             results.append({"case_id": cid, "trial": trial, "passed": passed,
@@ -87,6 +97,9 @@ def run(every=False):
                             in NEGATIVE_DECISIONS})
             if trial == 1:
                 queue.append(prepare_judgement_check(record, expected))
+            done += 1
+            if on_progress is not None:
+                on_progress(done, total, cid, trial, n_trials, record)
     return results, queue, unscripted
 
 
@@ -133,10 +146,23 @@ def summarise(results):
         "by_family": by_family,
         "per_case": [{"case_id": r["case_id"], "trial": r["trial"],
                       "turns": r["record"]["turns"], "passed": r["passed"],
-                      "family": r["family"], "negative": r["negative"]}
+                      "family": r["family"], "negative": r["negative"],
+                      "decision": r["record"].get("decision"),
+                      "trigger": r["record"].get("trigger"),
+                      "reason": (r["record"].get("reason") or "")[:240],
+                      "evidence": r["record"].get("evidence"),
+                      "stopped_by": r["record"].get("stopped_by"),
+                      "fails": r.get("fails") or []}
                      for r in results],
         "weak_step_candidates": reliability.weak_step_candidates(results),
+        "decision_counts": _decision_counts(results),
     }
+
+
+def _decision_counts(results):
+    from collections import Counter
+    return dict(Counter((r["record"].get("decision") or "(none)")
+                        for r in results))
 
 
 def report(every=False):
