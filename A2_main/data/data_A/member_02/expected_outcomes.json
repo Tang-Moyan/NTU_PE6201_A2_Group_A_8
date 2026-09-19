@@ -1,0 +1,53 @@
+[
+  {
+    "case_id": "CLM-9006",
+    "expected_decision": "approve_in_principle",
+    "family": "annual_limit_exact_boundary",
+    "must_record": [
+      "claim total 6000",
+      "6000 remaining",
+      "approved_total 6000"
+    ],
+    "note": "Exactly at the limit is allowed."
+  },
+  {
+    "case_id": "CLM-9007",
+    "expected_decision": "approve_in_principle",
+    "family": "policy_start_boundary",
+    "must_record": [
+      "date equals policy start 2026-09-01",
+      "approved_total 160"
+    ],
+    "note": "Inclusive start boundary."
+  },
+  {
+    "case_id": "CLM-9008",
+    "expected_decision": "approve_in_principle",
+    "family": "policy_end_boundary",
+    "must_record": [
+      "date equals policy end 2027-08-31",
+      "approved_total 110"
+    ],
+    "note": "Inclusive end boundary."
+  },
+  {
+    "case_id": "CLM-9009",
+    "expected_decision": "approve_in_principle",
+    "family": "non_panel_overseas",
+    "must_record": [
+      "H-902 non-panel and MY recorded",
+      "approved_total 210"
+    ],
+    "note": "Non-panel overseas remains decidable."
+  },
+  {
+    "case_id": "CLM-9010",
+    "expected_decision": "approve_in_principle",
+    "family": "four_line_long_run",
+    "must_record": [
+      "a disposition for all 4 lines",
+      "approved_total 1000"
+    ],
+    "note": "Long run for parallel coverage checks."
+  }
+]

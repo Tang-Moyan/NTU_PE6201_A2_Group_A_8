@@ -1,0 +1,94 @@
+[
+  {
+    "claim_id": "CLM-9006",
+    "member_id": "M-7001",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-06",
+    "narrative": "This bill is for the specialist's consultation after my recent admission.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "99213",
+        "amount": 6000
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9007",
+    "member_id": "M-7002",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-01",
+    "narrative": "I visited the clinic because the pain in my shoulder had not settled.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "99213",
+        "amount": 160
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9008",
+    "member_id": "M-7002",
+    "hospital_id": "H-901",
+    "date_of_service": "2027-08-31",
+    "narrative": "The clinic performed a heart tracing during my annual review.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "93000",
+        "amount": 110
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9009",
+    "member_id": "M-7004",
+    "hospital_id": "H-902",
+    "date_of_service": "2026-09-08",
+    "narrative": "I felt unwell while visiting family in Johor and paid for the consultation myself.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "99213",
+        "amount": 210
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9010",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-09",
+    "narrative": "During my day visit I saw the doctor and completed the tests and scan they ordered.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "99213",
+        "amount": 180
+      },
+      {
+        "code": "80053",
+        "amount": 90
+      },
+      {
+        "code": "93000",
+        "amount": 120
+      },
+      {
+        "code": "70553",
+        "amount": 610
+      }
+    ]
+  }
+]
