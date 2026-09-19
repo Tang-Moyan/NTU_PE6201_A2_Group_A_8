@@ -1,0 +1,58 @@
+[
+  {
+    "case_id": "CLM-9021",
+    "expected_decision": "approve_in_principle",
+    "family": "preauth_present_and_valid",
+    "must_record": [
+      "PA-9002 cited for 27447",
+      "approved_total 7800"
+    ],
+    "note": "Single pre-authorisation path."
+  },
+  {
+    "case_id": "CLM-9022",
+    "expected_decision": "request_document",
+    "family": "preauth_absent",
+    "must_record": [
+      "line 29881 named",
+      "date 2026-09-21 named"
+    ],
+    "note": "Must ask specifically, not invent approval.",
+    "missing": "pre-authorisation reference for line 29881, valid on 2026-09-21"
+  },
+  {
+    "case_id": "CLM-9023",
+    "expected_decision": "request_document",
+    "family": "preauth_expired",
+    "must_record": [
+      "PA-9004 found",
+      "validity ended 2026-03-31",
+      "line 29881 named"
+    ],
+    "note": "Existing does not mean valid.",
+    "missing": "current pre-authorisation for line 29881, valid on 2026-09-22"
+  },
+  {
+    "case_id": "CLM-9024",
+    "expected_decision": "request_document",
+    "family": "required_document_absent",
+    "must_record": [
+      "itemised bill named",
+      "line 45378 named"
+    ],
+    "note": "Catches vague requests.",
+    "missing": "itemised bill for line 45378"
+  },
+  {
+    "case_id": "CLM-9025",
+    "expected_decision": "request_document",
+    "family": "required_document_absent",
+    "must_record": [
+      "discharge summary named",
+      "line 62480 named",
+      "PA-9003 recorded as valid"
+    ],
+    "note": "The pre-auth is valid but the document is absent.",
+    "missing": "discharge summary for line 62480"
+  }
+]

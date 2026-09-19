@@ -1,0 +1,81 @@
+[
+  {
+    "claim_id": "CLM-9021",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-20",
+    "narrative": "After several months of worsening mobility, I went ahead with the knee replacement.",
+    "documents": [
+      "itemised_bill",
+      "discharge_summary"
+    ],
+    "lines": [
+      {
+        "code": "27447",
+        "amount": 7800
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9022",
+    "member_id": "M-7002",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-21",
+    "narrative": "The surgeon carried out keyhole treatment on my knee after physiotherapy did not help.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "29881",
+        "amount": 1800
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9023",
+    "member_id": "M-7001",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-22",
+    "narrative": "I finally had the knee procedure that was first discussed early this year.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "29881",
+        "amount": 1750
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9024",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-23",
+    "narrative": "I attended the hospital for the bowel examination and was discharged that evening.",
+    "documents": [],
+    "lines": [
+      {
+        "code": "45378",
+        "amount": 1100
+      }
+    ]
+  },
+  {
+    "claim_id": "CLM-9025",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-09-24",
+    "narrative": "The back operation went ahead after months of pain and difficulty walking.",
+    "documents": [
+      "itemised_bill"
+    ],
+    "lines": [
+      {
+        "code": "62480",
+        "amount": 3200
+      }
+    ]
+  }
+]
