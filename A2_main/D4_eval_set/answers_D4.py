@@ -540,31 +540,38 @@ EXTRA_LABELS = [{'case_id': 'CLM-9001',
 # 评估策略
 # =====================================================================
 
-TRIALS_ORDINARY = TEMPLATE(
-    "普通 case 跑几次？brief 说 ordinary cases get ONE trial。", example=1)
+TRIALS_ORDINARY = 1 #TEMPLATE(
+    #"普通 case 跑几次？brief 说 ordinary cases get ONE trial。", example=1)
 
-TRIALS_NEGATIVE = TEMPLATE(
-    "negative case 跑几次？brief 说 THREE —— negative 是会在多次运行之间"
-    "翻转的那些，一次 trial 分不出真正的拒绝和运气好的拒绝。", example=3)
+TRIALS_NEGATIVE = 3 #TEMPLATE(
+    #"negative case 跑几次？brief 说 THREE —— negative 是会在多次运行之间"
+    #"翻转的那些，一次 trial 分不出真正的拒绝和运气好的拒绝。", example=3)
 
 # 混合评分器：能诚实自动化的就自动化，不能的就人工/模型判断。
 # "A substring check that passes for the wrong reason is a real failure
 #  mode, and Class 4 showed you one."
-AUTO_GRADED_FIELDS = TEMPLATE(
-    "哪些字段用自动检查？scaffold 默认比对 decision 和 trigger。",
-    example=["decision", "trigger"])
+AUTO_GRADED_FIELDS = ["decision", "trigger"] #TEMPLATE(
+    #"哪些字段用自动检查？scaffold 默认比对 decision 和 trigger。",
+    #example=["decision", "trigger"])
 
-JUDGEMENT_GRADER = TEMPLATE(
-    "must_record 那些英文条目由谁裁定？'person: 姓名' 或 'model: 模型名'。"
-    "**如果用模型，必须在报告里说明** —— a model grading a model is a claim "
-    "that needs defending.",
-    example="person: rotating, one reviewer per batch of 10, named in "
+JUDGEMENT_GRADER = (
+    "person: rotating team review; reviewer name and verdict recorded "
+    "per case in output/D4_judgement.json"
+) #TEMPLATE(
+    #"must_record 那些英文条目由谁裁定？'person: 姓名' 或 'model: 模型名'。"
+    #"**如果用模型，必须在报告里说明** —— a model grading a model is a claim "
+    #"that needs defending.",
+    #example="person: rotating, one reviewer per batch of 10, named in "
             "output/D4_judgement.json")
 
-WHY_NOT_SUBSTRING = TEMPLATE(
-    "为什么 must_record 不能用子串匹配？一句话。",
-    example="'approved_total 2180' would pass on a record that printed the "
-            "number inside a sentence saying the opposite.")
+WHY_NOT_SUBSTRING = (
+    "A required phrase may appear inside a factually incorrect or opposite "
+    "statement, so substring presence does not prove that the decision record "
+    "expresses the required meaning."
+)#TEMPLATE(
+    #"为什么 must_record 不能用子串匹配？一句话。",
+    #example="'approved_total 2180' would pass on a record that printed the "
+            #"number inside a sentence saying the opposite.")
 
 
 # =====================================================================
@@ -575,27 +582,22 @@ WHY_NOT_SUBSTRING = TEMPLATE(
 #
 # **最值钱的一条**：a negative case that ACTUALLY FIRED during your
 # development, and changed something, earns explicit credit.
-NEGATIVE_CASES_THAT_FIRED = TEMPLATE(
-    "开发过程中真的抓到东西、并且让你们改了代码的 negative case。"
-    "写 [{'case_id','what_it_caught','what_changed'}]。一个都没有就填 []，"
-    "但那通常说明你们的 negative 还不够狠。",
-    example=[{"case_id": "CLM-8894",
-              "what_it_caught": "We treated an expired pre-authorisation as "
-                                "'no authorisation', and declined instead of "
-                                "asking.",
-              "what_changed": "get_preauthorisation's failure field now says "
-                              "None means the evidence is missing, not that "
-                              "the line is uncovered."}])
+NEGATIVE_CASES_THAT_FIRED = [] #TEMPLATE(
+    #"开发过程中真的抓到东西、并且让你们改了代码的 negative case。"
+    #"写 [{'case_id','what_it_caught','what_changed'}]。一个都没有就填 []，"
+    #"但那通常说明你们的 negative 还不够狠。",
+    #example=[{"case_id": "CLM-8894",
+              #"what_it_caught": "We treated an expired pre-authorisation as "
+                                #"'no authorisation', and declined instead of "
+                                #"asking.",
+              #"what_changed": "get_preauthorisation's failure field now says "
+                              #"None means the evidence is missing, not that "
+                              #"the line is uncovered."}])
 
-COVERAGE_PLAN = TEMPLATE(
-    "覆盖计划：你们的 30-50 个 case 怎么分布到各个 negative family？"
-    "Problem A 的 family 清单在 problem statement 里："
-    "policy lapsed/outside dates · one line excluded · preauth absent · "
-    "preauth expired · annual limit exceeded · duplicate · "
-    "instruction in narrative。"
-    "写 {family: 数量}。",
-    example={"partly_payable": 6, "preauth_absent": 3, "preauth_expired": 3,
-             "policy_lapsed": 2, "outside_policy_dates": 2,
-             "annual_limit_exceeded": 3, "duplicate_of_decided_claim": 3,
-             "prompt_injection": 4, "ordinary_short_run": 8,
-             "ordinary_long_run": 6})
+COVERAGE_PLAN = {
+    "policy_lapsed": 2,
+    "outside_policy_dates": 2,
+    "annual_limit_exceeded": 2,
+    "duplicate_of_decided_claim": 2,
+    "prompt_injection": 3,
+}
