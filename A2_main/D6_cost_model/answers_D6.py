@@ -77,9 +77,13 @@ CAPS = {
     "budget_ceiling": TEMPLATE("每次运行的 token 上限。和 D3 一致。",
                                example=60000),
     "monthly_limit_per_user": TEMPLATE(
-        "每个用户每月的上限。这一条 scaffold 里没有，需要你们自己定义并辩护。",
-        example="200 claims per assessor account per month, which is roughly "
-                "2x the observed peak"),
+        "每个用户每月的上限。我们选择：写成政策承诺，不在 Guardrails 里 "
+        "enforce（单次运行的对象看不到跨 run 的月度用量）。陈述数值 + "
+        "单位 + 明确说它不是代码控制。",
+        example="200 claims per assessor account per month (policy "
+                "commitment, not a code control). Enforced at account "
+                "provisioning / ops quota, not inside the per-run "
+                "Guardrails instance."),
 }
 
 

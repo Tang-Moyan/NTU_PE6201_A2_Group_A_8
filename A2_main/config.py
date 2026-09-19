@@ -59,11 +59,12 @@ MAX_TURNS = 8                 # step cap
 MAX_TOKENS_PER_RUN = 60000    # budget ceiling
 AUTONOMY = "confirm"          # "suggest" | "confirm" | "act"
 
-# TODO(D6/cap): D6 asks for THREE caps and the scaffold ships two. Add a
-#   monthly limit per user, decide what it is measured in (claims per
-#   assessor account?) and enforce it somewhere you can point at. Right
-#   now this is a number with no code behind it.
-MONTHLY_LIMIT_PER_USER = None
+# NOTE(D6/cap): third cap — monthly limit per user. Stated as a POLICY
+#   COMMITMENT in answers_D6.CAPS / the report, not enforced in
+#   Guardrails (a per-run object cannot see cross-run monthly volume).
+#   Set the number you commit to; leave enforcement to ops / account
+#   provisioning, not the agent loop.
+MONTHLY_LIMIT_PER_USER = 200  # claims per assessor account per month
 #   suggest  - the agent proposes; a human does everything
 #   confirm  - the agent does everything EXCEPT the irreversible step,
 #              which waits for a yes. THE GATE GOES IN FRONT OF THE

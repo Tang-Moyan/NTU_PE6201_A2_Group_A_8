@@ -22,9 +22,10 @@
 python A2_main/code_todo.py D3     # guardrails.py 和 config.py 里标了什么
 ```
 
-**两个 TODO 是真实的代码缺口**：护栏层里**没有**针对敌意自由文本的防御
-（而 D3(b) 要求至少 3 条这类用例），以及 D6 要的第三个 cap
-（`config.MONTHLY_LIMIT_PER_USER` 存在但没人读它）。
+**还剩一个真实代码缺口**：护栏层里**没有**针对敌意自由文本的防御
+（而 D3(b) 要求至少 3 条这类用例）。第三个 cap
+（`MONTHLY_LIMIT_PER_USER`）已定为**政策承诺、不在代码里 enforce**——
+在 `answers_D6.CAPS` 和报告里写清楚即可。
 
 ```bash
 python A2_main/D3_guardrails/test_D3.py

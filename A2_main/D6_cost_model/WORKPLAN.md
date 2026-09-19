@@ -146,8 +146,11 @@ brief 说这是报告里最有用的一句话。
 
 `step cap` · `budget ceiling` · `monthly limit per user`
 
-前两个在 `config.py` 里，`test_D6.py` 会检查 `answers_D6.CAPS` 和它一致。
-**第三个 scaffold 里没有**，需要你们自己定义并辩护。
+前两个在 `config.py` 里并由 `Guardrails` enforce，`test_D6.py` 会检查
+`answers_D6.CAPS` 和它们一致。
+**第三个**（`MONTHLY_LIMIT_PER_USER`）定为**政策承诺**：在
+`answers_D6.CAPS` / 报告里陈述数值与单位，并写明它不是代码控制——
+不在 `Guardrails` 里 enforce（单次运行看不到跨 run 的月度用量）。
 
 ---
 

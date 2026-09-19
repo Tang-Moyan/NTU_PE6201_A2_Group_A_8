@@ -35,11 +35,12 @@ TODO(D3/injection): there is NO guard here against hostile free text,
   with trigger `instruction_in_member_narrative`, and the record must
   show the instruction was FOUND AND NOT FOLLOWED.
 
-TODO(D3/monthly-cap): D6 asks for three caps and this layer enforces
-  two. config.MONTHLY_LIMIT_PER_USER exists and nothing reads it.
-  Either enforce it here or say plainly in the report that it is a
-  policy commitment rather than a code control - both are defensible,
-  pretending is not.
+NOTE(D3/monthly-cap): D6 asks for three caps; this layer enforces two
+  (step cap, budget ceiling). MONTHLY_LIMIT_PER_USER is a policy
+  commitment, not a code control — stated in answers_D6.CAPS and the
+  report, deliberately not enforced here. A per-run Guardrails instance
+  cannot see cross-run monthly volume; pretending it does would be worse
+  than naming the gap.
 ====================================================================
 """
 
