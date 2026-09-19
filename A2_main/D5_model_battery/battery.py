@@ -41,6 +41,13 @@ from D5_model_battery import answers_D5 as A                   # noqa: E402
 
 LIVE = os.environ.get("A2_LIVE") == "1"
 
+# One member, one model, one key (brief section 7). Without a filter,
+# battery() runs EVERY declared model on whoever's key is set, which is
+# about US$5.92 for five models - past the US$3 per-member ceiling.
+# Set A2_OWNER to your name in answers_D5.MODELS to run only your own.
+# Unset, behaviour is unchanged: every declared model runs.
+OWNER = os.environ.get("A2_OWNER") or None
+
 
 # ---------------------------------------------------------------------
 # D5(a) - the reproducible scripted run
@@ -68,7 +75,10 @@ def scripted_run():
 # D5(b) - the live battery
 # ---------------------------------------------------------------------
 def live_models():
-    return [m for m in A.MODELS if is_filled(m.get("slug"))]
+    ms = [m for m in A.MODELS if is_filled(m.get("slug"))]
+    if OWNER:
+        ms = [m for m in ms if m.get("owner") == OWNER]
+    return ms
 
 
 def run_live_model(model):
@@ -104,7 +114,14 @@ def battery():
             "  Each member runs one model on their own key - see\n"
             "  answers_D5.MODELS for who owns which.\n")
     models = live_models()
-    if len(models) < 3:
+    if not models:
+        raise SystemExit(
+            "\n  No models to run. A2_OWNER=%r matches no owner in "
+            "answers_D5.MODELS.\n" % OWNER)
+    # Three models is the floor for the SUBMISSION, not for one member's
+    # run: each member contributes one row and the results are merged.
+    # Only enforce the floor when running the whole battery on one key.
+    if not OWNER and len(models) < 3:
         raise SystemExit(
             "\n  D5(b) needs at least three models; answers_D5.MODELS has "
             "%d filled in.\n" % len(models))
