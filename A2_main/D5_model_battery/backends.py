@@ -95,34 +95,31 @@ class LiveBackend:
         self.case_id = case_id
         self.tools = tool_descriptors
         self.system_prompt = system_prompt
+        # Usage from the most recent OpenRouter call. agent.py adds each
+        # (prompt, completion) pair into the run totals, so these must be
+        # per-call counts, not a running sum.
+        self._last_prompt_tokens = 0
+        self._last_completion_tokens = 0
 
     def next_move(self, transcript):
         messages = [{"role": "system", "content": self.system_prompt}]
         for entry in transcript:
             messages.append({"role": entry["role"], "content": entry["content"]})
-        raw = _live_call(messages)
+        raw, usage = _live_call(messages)
+        self._last_prompt_tokens = int(usage.get("prompt_tokens") or 0)
+        self._last_completion_tokens = int(usage.get("completion_tokens") or 0)
         return _parse_move(raw)
 
-    @staticmethod
-    def token_estimate(transcript):
-        # TODO(D5/tokens): return the REAL usage numbers.
-        #
-        #   The API sends them back on every call:
-        #       payload["usage"]["prompt_tokens"]
-        #       payload["usage"]["completion_tokens"]
-        #   and on a reasoning model the thinking tokens are already
-        #   inside completion_tokens - which is the only way you will
-        #   notice them.
-        #
-        #   _live_call() below currently throws the whole payload away
-        #   except for the message content. Capture usage there, stash it
-        #   on the instance, and hand it back here.
-        #
-        #   UNTIL THIS IS DONE the live battery reports zero tokens, so
-        #   D6's layer 1 would be an estimate wearing the label
-        #   "measured" - the exact mistake D6 punishes. battery.py fails
-        #   loudly if it sees a live run report zero.
-        return 0, 0
+    def token_estimate(self, transcript):
+        """Measured usage from the last OpenRouter call (not an estimate).
+
+        OpenRouter mirrors OpenAI's usage block:
+            prompt_tokens / completion_tokens
+        On reasoning models, thinking tokens are already inside
+        completion_tokens — that is how you notice them.
+        `transcript` is unused; the API counted the real request.
+        """
+        return self._last_prompt_tokens, self._last_completion_tokens
 
 
 def _parse_move(text):
@@ -142,6 +139,9 @@ def _live_call(messages):
     Everything else speaks in terms of moves and transcripts. Swapping
     vendor means rewriting this one function, and changing MODEL and
     BASE_URL in config.py. Nothing else.
+
+    Returns (content, usage) where usage is the OpenRouter/OpenAI-shaped
+    dict with prompt_tokens and completion_tokens.
     """
     if not config.API_KEY:
         raise SystemExit(
@@ -160,7 +160,14 @@ def _live_call(messages):
                  "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=60) as r:
         payload = json.load(r)
-    return payload["choices"][0]["message"]["content"]
+    content = payload["choices"][0]["message"]["content"]
+    usage = payload.get("usage") or {}
+    if not usage.get("prompt_tokens"):
+        raise SystemExit(
+            "\n  OpenRouter returned no usage.prompt_tokens.\n"
+            "  Live battery / D6 need measured counts; refusing to report "
+            "zeros as measured.\n  Full usage block: %r\n" % usage)
+    return content, usage
 
 
 def make_backend(case_id, tool_descriptors=None, system_prompt=""):
