@@ -76,13 +76,17 @@ CAPS = {
     "step_cap": 8,           # == config.MAX_TURNS
     "budget_ceiling": 60000, # == config.MAX_TOKENS_PER_RUN
     "monthly_limit_per_user": (
-        "200 claims per assessor account per month. Our observed peak is "
-        "about 100, so this is 2x headroom and will not bite a real "
-        "assessor; it caps a runaway integration at roughly US$3.60 of "
-        "tokens per account per month. Unlike the other two caps this one "
-        "is not in the scaffold - it exists because the step cap and the "
-        "budget ceiling bound one run, and neither bounds a caller that "
-        "starts ten thousand of them."),
+        "200 claims per assessor account per month - a POLICY COMMITMENT, "
+        "not a code control, and we state it that way deliberately. The "
+        "step cap and the budget ceiling each bound one run; neither bounds "
+        "a caller that starts ten thousand of them. But a per-run "
+        "Guardrails instance cannot see cross-run monthly usage either, so "
+        "this cap is enforced at account provisioning and ops quota rather "
+        "than inside the loop. Saying so is more honest than implying the "
+        "code enforces it. Our observed peak is about 100 claims per "
+        "account, so 200 is 2x headroom and will not bite a real assessor; "
+        "it caps a runaway integration at roughly US$2.20 of tokens per "
+        "account per month."),
 }
 
 
@@ -134,15 +138,17 @@ LEVERS = {
                  "instead of eight.")},
     2: {"what": "Turn count (T) - the quadratic term, the biggest lever",
         "built_in": "D2(c)",
-        "before": "153 turns / 918,000 input tokens (31 cases)",
-        "after": "92 turns / 447,000 input tokens (31 cases)",
+        "before": "215 turns / 1,287,600 input tokens (45 cases)",
+        "after": "128 turns / 617,400 input tokens (45 cases)",
         "note": ("Coverage, hospital and document checks for the three lines "
                  "are independent of one another, so they share one turn. "
                  "The pre-authorisation lookup cannot move: it depends on "
                  "first learning that a procedure requires one. The "
                  "sequential arm also breached the budget ceiling and was "
-                 "halted on one case, so the saving is 51.3% of input tokens "
-                 "AND a pass rate of 100% against 96.8%.")},
+                 "halted, so the saving is 52.1% of input tokens AND a pass "
+                 "rate of 100% against 95.6%. Turns are the quadratic term - "
+                 "input tokens go as B*T + D*T^2/2 - which is why cutting T "
+                 "beats cutting B on the same body of work.")},
     3: {"what": "Observation size (D) - compounds across later turns",
         "built_in": "D2(b)",
         "before": TEMPLATE("v1 每次调用返回的 token 数"),
@@ -157,15 +163,15 @@ LEVERS = {
 
 DOMINANT_LEVER = (
     "Lever 4, the success rate, and it is not close. At our measured token "
-    "counts one run costs US$0.0115 in tokens while one failure costs "
-    "US$7.60 in assessor time - 661x. At 8,000 claims a month the entire "
-    "token bill is US$92, so a single point of pass rate is worth about "
-    "US$61, two thirds of the whole token spend. That is how we know: the "
-    "ratio between a run and a failure, not an opinion. Lever 2 is the "
-    "largest of the three token levers and worth pulling - 51.3% of input "
-    "tokens across 31 cases, and the sequential arm breached the budget "
-    "ceiling and lost a case - but all three token levers together move a "
-    "few percent of the bill. A team that optimised tokens and left the "
+    "counts one run costs US$0.0108 in tokens while one failure costs "
+    "US$7.60 in assessor time - 702x. At 8,000 claims a month the entire "
+    "token bill is US$87, while a single percentage point of pass rate is "
+    "worth US$608 a month - seven times the whole token spend. That is how "
+    "we know: the ratio between a run and a failure, not an opinion. Lever "
+    "2 is the largest of the three token levers and worth pulling - 52.1% "
+    "of input tokens across 45 cases, and the sequential arm breached the "
+    "budget ceiling - but even halving every token lever would not buy what "
+    "one point of accuracy buys. A team that optimised tokens and left the "
     "pass rate alone would have worked on the wrong problem.")
 
 
