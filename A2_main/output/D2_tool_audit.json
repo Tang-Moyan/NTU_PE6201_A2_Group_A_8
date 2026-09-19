@@ -1,6 +1,6 @@
 {
   "name": "D2_tool_audit",
-  "written_at": "2026-09-07T16:19:45",
+  "written_at": "2026-09-19T04:03:30",
   "written_by": "D2/tool_audit.py",
   "payload": {
     "tools": [
@@ -9,7 +9,6 @@
       "get_claim",
       "get_preauthorisation",
       "issue_decision_letter",
-      "lookup_hospital",
       "lookup_policy"
     ],
     "missing_rows": [],
@@ -17,8 +16,8 @@
     "sizes": {
       "per_tool": {
         "check_coverage": {
-          "chars": 730,
-          "approx_tokens": 182,
+          "chars": 884,
+          "approx_tokens": 221,
           "described": true
         },
         "check_duplicate_claim": {
@@ -27,8 +26,8 @@
           "described": true
         },
         "get_claim": {
-          "chars": 516,
-          "approx_tokens": 129,
+          "chars": 569,
+          "approx_tokens": 142,
           "described": true
         },
         "get_preauthorisation": {
@@ -41,20 +40,15 @@
           "approx_tokens": 185,
           "described": true
         },
-        "lookup_hospital": {
-          "chars": 457,
-          "approx_tokens": 114,
-          "described": true
-        },
         "lookup_policy": {
-          "chars": 722,
-          "approx_tokens": 180,
+          "chars": 694,
+          "approx_tokens": 173,
           "described": true
         }
       },
-      "tool_block_tokens": 1167,
-      "whole_prompt_tokens": 1547,
-      "whole_prompt_chars": 6191,
+      "tool_block_tokens": 1098,
+      "whole_prompt_tokens": 1478,
+      "whole_prompt_chars": 5912,
       "estimated": true
     }
   }

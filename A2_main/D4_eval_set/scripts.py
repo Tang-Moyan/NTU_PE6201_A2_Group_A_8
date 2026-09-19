@@ -137,7 +137,7 @@ SCRIPTS = {
     # ---------------------------------------------------------------
     # CLM-8842 - the partly payable claim from Appendix A.
     # Three lines, one of them excluded, one needing a pre-authorisation.
-    # Eight calls in FOUR turns. Read the turn grouping, not just the
+    # Seven calls in FOUR turns. Read the turn grouping, not just the
     # calls: it is the whole of D2(c) in one worked example.
     # ---------------------------------------------------------------
     "CLM-8842": [
@@ -145,14 +145,13 @@ SCRIPTS = {
                     "the hospital and the LINE ITEMS this returns.",
          "calls": [("get_claim", {"claim_id": "CLM-8842"})]},
 
-        {"thought": "Now five calls that depend on nothing but that record. "
-                    "The policy, the hospital, and one coverage check PER LINE "
+        {"thought": "Now four calls that depend on nothing but that record. "
+                    "The policy and one coverage check PER LINE "
                     "- three lines, three checks. All independent, so one turn.",
          "calls": [("lookup_policy", {"member_id": "M-2214"}),
                    ("check_coverage", {"code": "47120", "policy_id": "POL-3310"}),
                    ("check_coverage", {"code": "31255", "policy_id": "POL-3310"}),
-                   ("check_coverage", {"code": "62480", "policy_id": "POL-3310"}),
-                   ]},
+                   ("check_coverage", {"code": "62480", "policy_id": "POL-3310"})]},
 
         {"thought": "This one CANNOT join the turn above: I did not know which "
                     "line needed a pre-authorisation until coverage answered. "
@@ -178,7 +177,7 @@ SCRIPTS = {
                       "EX-14 cosmetic dermatology (300). approved_total 2180, "
                       "refused_total 300. H-114 is on panel.",
          },
-         "thought": "Eight calls, four turns. Not an approve and not a "
+         "thought": "Seven calls, four turns. Not an approve and not a "
                     "decline: one decision letter covering both."},
     ],
 
@@ -513,8 +512,7 @@ SCRIPTS = {
                     "on the claim record, so these checks can run in parallel.",
          "calls": [("lookup_policy", {"member_id": "M-7004"}),
                    ("check_coverage", {"code": "27447", "policy_id": "POL-8004"}),
-                   ("check_coverage", {"code": "62480", "policy_id": "POL-8004"}),
-                   ]},
+                   ("check_coverage", {"code": "62480", "policy_id": "POL-8004"})]},
 
         {"thought": "Both covered procedures require pre-authorisation. These two "
                     "authorisation lookups are independent, so they share one turn.",
@@ -553,11 +551,10 @@ SCRIPTS = {
                     "are known before any dependent checks.",
          "calls": [("get_claim", {"claim_id": "CLM-9012"})]},
 
-        {"thought": "Policy, coverage and hospital status all depend only on the "
+        {"thought": "Policy and coverage both depend only on the "
                     "claim record, so they can be checked in parallel.",
          "calls": [("lookup_policy", {"member_id": "M-7004"}),
-                   ("check_coverage", {"code": "70553", "policy_id": "POL-8004"}),
-                   ]},
+                   ("check_coverage", {"code": "70553", "policy_id": "POL-8004"})]},
 
         {"thought": "The procedure is covered and does not require pre-authorisation. "
                     "H-330 is non-panel but domestic, which is recorded without "
@@ -585,11 +582,10 @@ SCRIPTS = {
                     "are available for the dependent checks.",
          "calls": [("get_claim", {"claim_id": "CLM-9013"})]},
 
-        {"thought": "Policy, coverage and hospital checks are independent once the "
+        {"thought": "Policy and coverage checks are independent once the "
                     "claim has been retrieved, so they can run in parallel.",
          "calls": [("lookup_policy", {"member_id": "M-7001"}),
-                   ("check_coverage", {"code": "70553", "policy_id": "POL-8001"}),
-                   ]},
+                   ("check_coverage", {"code": "70553", "policy_id": "POL-8001"})]},
 
         {"thought": "POL-8001 excludes procedure 70553 under EX-22, so the line is "
                     "refused. No pre-authorisation lookup is needed.",
@@ -620,8 +616,7 @@ SCRIPTS = {
                     "only on the claim record, so they can run in parallel.",
          "calls": [("lookup_policy", {"member_id": "M-7001"}),
                    ("check_coverage", {"code": "99213", "policy_id": "POL-8001"}),
-                   ("check_coverage", {"code": "70553", "policy_id": "POL-8001"}),
-                ]},
+                   ("check_coverage", {"code": "70553", "policy_id": "POL-8001"})]},
 
         {"thought": "99213 is covered while 70553 is excluded under EX-22. Neither "
                     "line requires pre-authorisation, so the claim can proceed "
@@ -650,11 +645,10 @@ SCRIPTS = {
                     "are known.",
          "calls": [("get_claim", {"claim_id": "CLM-9015"})]},
 
-        {"thought": "Policy, coverage and hospital checks are independent after the "
+        {"thought": "Policy and coverage checks are independent after the "
                     "claim record is available, so they can run in parallel.",
          "calls": [("lookup_policy", {"member_id": "M-7004"}),
-                   ("check_coverage", {"code": "99213", "policy_id": "POL-8004"}),
-                   ]},
+                   ("check_coverage", {"code": "99213", "policy_id": "POL-8004"})]},
 
         {"thought": "99213 is covered and does not require pre-authorisation, so all "
                     "facts needed for the decision are already established.",

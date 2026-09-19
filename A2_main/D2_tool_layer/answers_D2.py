@@ -201,67 +201,118 @@ POKA_YOKE = [
     {"before": "check_coverage(code)",
      "after": "check_coverage(code, policy_id)",
      "makes_impossible": (
-         "Checking coverage against no policy at all and getting a "
-         "confident answer about nothing."
+         "Calling check_coverage with no policy at all and receiving a "
+         "confident-looking answer about nothing. Coverage only means "
+         "anything relative to a specific policy's exclusions, so without "
+         "a required policy_id the function could not honestly answer "
+         "the question it claims to answer."
      )},
     {"before": "get_preauthorisation(member_id, procedure_code)",
      "after": "get_preauthorisation(member_id, procedure_code, date_of_service)",
      "makes_impossible": (
-         "Looking up a pre-authorisation without the treatment date, so an "
-         "expired approval could silently look valid."
+         "Checking for a pre-authorisation without pinning it to the "
+         "actual treatment date. A pre-authorisation can exist for a "
+         "member and a procedure but have already expired by the date "
+         "of service - without date_of_service as a required argument, "
+         "the function could return an approval that was valid once but "
+         "is not valid now, silently turning an expired authorisation "
+         "into a false positive."
      )},
 ]
 
+# ---------------------------------------------------------------------
+# One measured rewrite. Pick one tool, write v1 and v2 descriptors plus
+# return shapes, and report three numbers: tokens returned per call,
+# evaluation pass rate, guardrail cases passed.
+#
+# Important: v2 should be the version now in D2_tool_layer/tools.py::DESCRIPTORS
+# (the good one). v1 is the version you deliberately made worse — the
+# experiment's control.
+#
+# Honesty requirement: if v2 is neither smaller nor safer, say so.
+# "a rewrite that did not help, honestly reported, scores better than
+#  one that was never measured."
+# ---------------------------------------------------------------------
 DESCRIPTOR_EXPERIMENT_TOOL = "get_preauthorisation"
 
+# v1: a deliberately worse six-field descriptor. Failure field collapsed
+# to "Returns null" - the exact mistake Class 4 warns teams make most,
+# since it hides the distinction between "never requested" and "expired".
 DESCRIPTOR_V1 = {
     "name": "get_preauthorisation",
     "purpose": "Look up a pre-authorisation.",
     "when": "When you need one.",
     "args": {"member_id": "str", "procedure_code": "str",
-             "date_of_service": "str"},
+              "date_of_service": "str"},
     "returns": "the pre-authorisation or null",
     "failure": "Returns null.",
 }
 
 
 def v1_return(tool_name, args, result):
-    """v1 return shape: deliberately fatter than the v2 projection."""
+    """v1 return shape: degrade v2's return into a fatter / more raw version.
+    """
     if tool_name != "get_preauthorisation":
         return result
-    from D2_tool_layer import tools
-    rows = tools._load("A", "preauthorisations")
-    return {
-        "query": args,
-        "all_rows": rows,
-        "match": result,
-        "note": "v1 dumps the whole table and lets the model filter",
-    }
+    if result is None:
+        return "null"
+    return (
+        "Pre-authorisation record found. "
+        "preauth_id=%s, member_id=%s, procedure_code=%s, "
+        "valid_from=%s, valid_to=%s. This record confirms that a "
+        "pre-authorisation was issued and is on file for this member "
+        "and procedure, granted under standard review, subject to the "
+        "usual terms and conditions of the policy in effect at the "
+        "time of issuance."
+        % (result["preauth_id"], result["member_id"],
+           result["procedure_code"], result["valid_from"],
+           result["valid_to"])
+    )
 
 
 DESCRIPTOR_EXPERIMENT_VERDICT = (
-    "v2's descriptor is 138 tokens longer (205 vs 67) and its return is "
-    "about 93% smaller (21 vs 296 avg tokens per call). The longer "
-    "descriptor is paid once per turn; the fat v1 return compounds because "
-    "every observation is re-sent on later turns. Guardrail cases stayed "
-    "10/10. Evaluation pass rate is not measurable on the scripted "
-    "backend - take it from the D5 live battery on one fixed model. A "
-    "prompt instruction is paid on every call, every run, forever, and "
-    "dies when you change models; an interface constraint is paid once "
-    "and holds permanently - which is why the return-shape cut, not the "
-    "descriptor length, is the dominant D2(b) saving."
+    "v2 is not smaller on the descriptor - it costs 138 more tokens per "
+    "turn (67 vs 205), because it spells out the pre-authorisation/expired "
+    "distinction instead of collapsing both into 'Returns null.' v2's "
+    "RETURN is much smaller: 32 tokens per call against v1's 90. v2 has "
+    "the lower per-call return cost, so its token advantage compounds as "
+    "observations are carried across later turns. Net verdict: v1's "
+    "smaller descriptor is not worth its bloated return. The descriptor "
+    "cost is incurred as part of each turn's prompt, while the "
+    "return-shape decision determines the size and clarity of every "
+    "observation passed downstream. The guardrail-cases-passed number "
+    "(1 of 10) is not reported here: it measures D3's code-layer "
+    "guardrails, which do not read tool descriptors at all, so it cannot "
+    "move between v1 and v2 and is not evidence for this experiment."
 )
+# =====================================================================
+# D2(c) - Multi-call turns: dependency rule and measurement
+# =====================================================================
 
+# Dependency rule: which tools may share a turn, and which may not.
+# There is only one criterion: a pair may run in parallel if and only if
+# neither needs the other's output.
+#
+# Ready-made structure for Problem A:
+#   turn 1  get_claim                        must run alone — everything
+#                                            later needs its return
+#   turn 2  lookup_policy + check_coverage×n
+#                                            mutually independent
+#   turn 3  get_preauthorisation             cannot join turn 2 —
+#                                            until coverage answers, you
+#                                            do not know which line needs it
+DEPENDENCY_RULE = TEMPLATE(
+    "Write the dependency rule in a paragraph. Name which pair cannot run "
+    "in parallel and why.",
+    example="A pair may share a turn only when neither needs the other's "
+            "output. get_claim runs alone. The policy lookup, the hospital "
+            "lookup and one check_coverage per line are mutually independent "
+            "and share turn 2. get_preauthorisation cannot join them: which "
+            "line needs one is not known until check_coverage has answered.")
 
-DEPENDENCY_RULE = (
-    "A pair may share a turn only when neither needs the other's output. "
-    "get_claim runs alone. lookup_policy, one check_coverage per line, and "
-    "check_duplicate_claim are mutually independent and share turn 2. "
-    "get_preauthorisation cannot join them: which line needs one is not "
-    "known until check_coverage has answered. issue_decision_letter is "
-    "last and gated."
-)
-
+# Each tool's prerequisites, as {tool: [whose output it needs]}.
+# The framework uses this to check that the turn grouping in your scripts
+# is actually legal.
 DEPENDS_ON = {
     "get_claim": [],
     "lookup_policy": ["get_claim"],

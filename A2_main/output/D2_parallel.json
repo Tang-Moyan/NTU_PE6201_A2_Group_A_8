@@ -1,6 +1,6 @@
 {
   "name": "D2_parallel",
-  "written_at": "2026-09-07T16:19:46",
+  "written_at": "2026-09-19T06:58:03",
   "written_by": "D2/parallel_ab.py",
   "payload": {
     "cases": [
@@ -19,40 +19,33 @@
     },
     "sequential": {
       "trials": 1,
-      "passed": 0,
-      "pass_rate": 0.0,
-      "total_turns": 8,
-      "median_turns": 8,
-      "max_turns": 8,
-      "tokens_in": 59400,
-      "tokens_out": 1080,
-      "cost_usd": 0.006372
+      "passed": 1,
+      "pass_rate": 1.0,
+      "total_turns": 7,
+      "median_turns": 7,
+      "max_turns": 7,
+      "tokens_in": 48000,
+      "tokens_out": 960,
+      "cost_usd": 0.005184
     },
     "per_case": [
       {
         "case_id": "CLM-8842",
         "parallel_turns": 4,
-        "sequential_turns": 8,
-        "calls": 8,
+        "sequential_turns": 7,
+        "calls": 7,
         "parallel_passed": true,
-        "sequential_passed": false
+        "sequential_passed": true
       }
     ],
     "saving": {
-      "turns_pct": 50.0,
-      "input_tokens_pct": 64.64646464646465,
-      "cost_pct": 63.27683615819208,
-      "pass_rate_moved": true
+      "turns_pct": 42.857142857142854,
+      "input_tokens_pct": 56.25,
+      "cost_pct": 54.861111111111114,
+      "pass_rate_moved": false
     },
     "halted": {
-      "sequential": [
-        {
-          "case_id": "CLM-8842",
-          "stopped_by": "budget_ceiling",
-          "decision": "escalate",
-          "reason": "halted by the budget_ceiling guardrail - spent 60480 tokens, ceiling is 60000"
-        }
-      ],
+      "sequential": [],
       "parallel": []
     }
   }
