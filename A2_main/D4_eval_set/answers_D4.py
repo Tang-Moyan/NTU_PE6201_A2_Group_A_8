@@ -555,8 +555,10 @@ AUTO_GRADED_FIELDS = ["decision", "trigger"] #TEMPLATE(
     #example=["decision", "trigger"])
 
 JUDGEMENT_GRADER = (
-    "person: rotating team review; reviewer name and verdict recorded "
-    "per case in output/D4_judgement.json"
+    "model: gpt-5.6-sol; reviewed all 45 first-trial decision records "
+    "against the Appendix A routing rules, underlying fixture evidence, "
+    "and each case's must_record requirements"
+)
 ) #TEMPLATE(
     #"must_record 那些英文条目由谁裁定？'person: 姓名' 或 'model: 模型名'。"
     #"**如果用模型，必须在报告里说明** —— a model grading a model is a claim "
