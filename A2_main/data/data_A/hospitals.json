@@ -22,5 +22,17 @@
     "name": "Penang Medical",
     "panel": false,
     "country": "MY"
+  },
+  {
+    "hospital_id": "H-901",
+    "name": "Harbour Community Hospital",
+    "panel": true,
+    "country": "SG"
+  },
+  {
+    "hospital_id": "H-902",
+    "name": "Johor Specialist Centre",
+    "panel": false,
+    "country": "MY"
   }
 ]

@@ -48,5 +48,15 @@
     "code": "80053",
     "description": "Comprehensive metabolic panel",
     "requires_preauth": false
+  },
+  {
+    "code": "93000",
+    "description": "Electrocardiogram",
+    "requires_preauth": false
+  },
+  {
+    "code": "47562",
+    "description": "Laparoscopic cholecystectomy",
+    "requires_preauth": true
   }
 ]

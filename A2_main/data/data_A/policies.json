@@ -67,5 +67,50 @@
         "rule": "EX-14 cosmetic dermatology"
       }
     ]
+  },
+  {
+    "policy_id": "POL-8001",
+    "product": "Shield Select",
+    "status": "active",
+    "start_date": "2026-01-01",
+    "end_date": "2026-12-31",
+    "annual_limit": 10000,
+    "used_to_date": 4000,
+    "exclusions": [
+      {
+        "code": "70553",
+        "rule": "EX-22 advanced imaging"
+      }
+    ]
+  },
+  {
+    "policy_id": "POL-8002",
+    "product": "Shield Select",
+    "status": "active",
+    "start_date": "2026-09-01",
+    "end_date": "2027-08-31",
+    "annual_limit": 5000,
+    "used_to_date": 1000,
+    "exclusions": []
+  },
+  {
+    "policy_id": "POL-8003",
+    "product": "Shield Select",
+    "status": "lapsed",
+    "start_date": "2025-07-01",
+    "end_date": "2026-06-30",
+    "annual_limit": 9000,
+    "used_to_date": 1200,
+    "exclusions": []
+  },
+  {
+    "policy_id": "POL-8004",
+    "product": "Shield Premium",
+    "status": "active",
+    "start_date": "2026-01-01",
+    "end_date": "2026-12-31",
+    "annual_limit": 20000,
+    "used_to_date": 2000,
+    "exclusions": []
   }
 ]

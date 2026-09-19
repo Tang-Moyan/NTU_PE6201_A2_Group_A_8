@@ -54,5 +54,19 @@
     ],
     "decision": "decline",
     "decided_on": "2026-07-30"
+  },
+  {
+    "claim_id": "CLM-8999",
+    "member_id": "M-7004",
+    "hospital_id": "H-901",
+    "date_of_service": "2026-08-15",
+    "lines": [
+      {
+        "code": "93000",
+        "amount": 120
+      }
+    ],
+    "decision": "approve_in_principle",
+    "decided_on": "2026-08-17"
   }
 ]
