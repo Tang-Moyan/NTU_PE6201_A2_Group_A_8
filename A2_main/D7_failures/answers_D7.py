@@ -67,14 +67,20 @@ FAILURE_2 = {
     "deletion": "fat_observation",
     "case_id": "CLM-8842",
     "what_goes_wrong": (
-        "check_coverage returns the whole procedures and policies tables "
-        "instead of one projection. Observation size per call goes from "
-        "tens of tokens to hundreds, and every one of those tokens is "
-        "re-sent on every later turn."
+        "check_coverage's return is wrapped with the entire procedures "
+        "and policies tables (21 rows combined, under the 40-row default "
+        "cap) alongside the real result, instead of returning just the "
+        "projection the next step needs. check_coverage is called once "
+        "per line item, so on a 3-line claim like CLM-8842 this padding "
+        "is paid three times in one run."
     ),
     "how_it_was_detected": (
-        "tokens_in per run, logged while the run happened. The decision "
-        "did not change; the bill did."
+        "tokens_in per run, logged while the run happened. On the whole "
+        "81-trial set: pass rate unchanged at 100.0% and median turns "
+        "unchanged at 3, but cost rose from $0.07335 to $0.08521 "
+        "(~16%). The decision never changed; only the bill did - "
+        "invisible to a pass-rate table, visible only because tokens "
+        "were counted while the run happened."
     ),
     "fix": (
         "Restore the filtered projection: each tool returns only the "
@@ -87,16 +93,22 @@ FAILURE_2 = {
         "holds permanently."
     ),
     "why_not_code": (
-        "A step or token cap would only truncate the damage after the fat "
-        "observation had already been billed and re-sent; it would not "
-        "stop the tool from returning the wrong shape."
+        "MAX_TURNS is 8 and MAX_TOKENS_PER_RUN is 60000; the broken run "
+        "used only 4 turns and 18,691 tokens - nowhere near either cap. "
+        "A step or token cap would only truncate damage after a fat "
+        "observation had already been billed and re-sent; here it "
+        "would never even fire, let alone stop the tool from returning "
+        "the wrong shape."
     ),
     "why_not_prompt": (
-        "Telling the model to ignore extra fields still ships those fields "
-        "in every later turn. The cheaper fix is not to return them."
+        "This failure is a return-shape problem, not a descriptor "
+        "problem - unlike the D2(b) descriptor experiment, the tool's "
+        "instructions are unchanged here, only what it hands back. "
+        "Telling the model to ignore extra fields still ships those "
+        "fields in every later turn. The cheaper fix is not to return "
+        "them."
     ),
 }
-
 
 # =====================================================================
 # Conclusion across both failures
