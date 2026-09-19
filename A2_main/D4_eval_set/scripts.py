@@ -56,6 +56,84 @@ understanding, done twice.
 =====================================================================
 """
 
+
+def _approval_script(case_id, member_id, policy_id, lines, approved_total,
+                     reason, refused_total=0, preauthorisations=()):
+    """Build the repeated safe path while keeping each case explicit below."""
+    coverage_calls = [
+        ("check_coverage", {"code": line["code"], "policy_id": policy_id})
+        for line in lines
+    ]
+    steps = [
+        {"thought": "Retrieve the claim first; every later check depends on "
+                    "its member, hospital, date, documents and complete line list.",
+         "calls": [("get_claim", {"claim_id": case_id})]},
+        {"thought": "Policy, per-line coverage and exact duplicate checks can be "
+                    "performed from the retrieved claim before any action is sent.",
+         "calls": [
+             ("lookup_policy", {"member_id": member_id}),
+             *coverage_calls,
+             ("check_duplicate_claim", {
+                 "member_id": member_id,
+                 "hospital_id": None,
+                 "date_of_service": None,
+                 "lines": lines,
+             }),
+         ]},
+    ]
+
+    # Fill the two values that vary per claim without hiding them in the caller.
+    claim_facts = _CLAIM_FACTS[case_id]
+    duplicate_args = steps[1]["calls"][-1][1]
+    duplicate_args["hospital_id"] = claim_facts["hospital_id"]
+    duplicate_args["date_of_service"] = claim_facts["date_of_service"]
+
+    if preauthorisations:
+        steps.append({
+            "thought": "Coverage identified the lines that require prior approval; "
+                       "their independent authorisation checks share one turn.",
+            "calls": [("get_preauthorisation", {
+                "member_id": member_id,
+                "procedure_code": code,
+                "date_of_service": claim_facts["date_of_service"],
+            }) for code in preauthorisations],
+        })
+
+    steps.extend([
+        {"thought": "Every line now has a supported disposition and the claim is "
+                    "not a duplicate, so the gated decision can be issued once.",
+         "calls": [("issue_decision_letter", {
+             "claim_id": case_id,
+             "decision": "approve_in_principle",
+             "lines_resolved": len(lines),
+             "approved_total": approved_total,
+             "refused_total": refused_total,
+         })]},
+        {"thought": "Conclude with the evidence and totals needed by the answer key.",
+         "final": {"decision": "approve_in_principle", "reason": reason}},
+    ])
+    return steps
+
+
+_CLAIM_FACTS = {
+    "CLM-9001": {"hospital_id": "H-901", "date_of_service": "2026-09-01"},
+    "CLM-9002": {"hospital_id": "H-901", "date_of_service": "2026-09-02"},
+    "CLM-9003": {"hospital_id": "H-901", "date_of_service": "2026-09-03"},
+    "CLM-9004": {"hospital_id": "H-901", "date_of_service": "2026-09-04"},
+    "CLM-9005": {"hospital_id": "H-901", "date_of_service": "2026-09-05"},
+    "CLM-9006": {"hospital_id": "H-901", "date_of_service": "2026-09-06"},
+    "CLM-9007": {"hospital_id": "H-901", "date_of_service": "2026-09-01"},
+    "CLM-9008": {"hospital_id": "H-901", "date_of_service": "2027-08-31"},
+    "CLM-9009": {"hospital_id": "H-902", "date_of_service": "2026-09-08"},
+    "CLM-9010": {"hospital_id": "H-901", "date_of_service": "2026-09-09"},
+    "CLM-9016": {"hospital_id": "H-451", "date_of_service": "2026-09-15"},
+    "CLM-9017": {"hospital_id": "H-901", "date_of_service": "2026-09-16"},
+    "CLM-9018": {"hospital_id": "H-901", "date_of_service": "2026-09-17"},
+    "CLM-9019": {"hospital_id": "H-901", "date_of_service": "2026-09-18"},
+    "CLM-9020": {"hospital_id": "H-902", "date_of_service": "2026-09-19"},
+    "CLM-9021": {"hospital_id": "H-901", "date_of_service": "2026-09-20"},
+}
+
 SCRIPTS = {
 
     # ---------------------------------------------------------------
@@ -105,6 +183,74 @@ SCRIPTS = {
          "thought": "Eight calls, four turns. Not an approve and not a "
                     "decline: one decision letter covering both."},
     ],
+
+    "CLM-9001": _approval_script(
+        "CLM-9001", "M-7004", "POL-8004",
+        [{"code": "93000", "amount": 120}], 120,
+        "93000 covered (120). approved_total 120. H-901 is on panel."),
+
+    "CLM-9002": _approval_script(
+        "CLM-9002", "M-7004", "POL-8004",
+        [{"code": "99213", "amount": 190},
+         {"code": "80053", "amount": 85}], 275,
+        "Both lines covered: 99213 (190) and 80053 (85). approved_total 275. "
+        "H-901 is on panel."),
+
+    "CLM-9003": _approval_script(
+        "CLM-9003", "M-7002", "POL-8002",
+        [{"code": "47562", "amount": 2600}], 2600,
+        "47562 covered (2600); PA-9001 cited and valid on 2026-09-03. "
+        "approved_total 2600. H-901 is on panel.",
+        preauthorisations=("47562",)),
+
+    "CLM-9004": _approval_script(
+        "CLM-9004", "M-7001", "POL-8001",
+        [{"code": "70553", "amount": 650}], 0,
+        "70553 refused under EX-22 advanced imaging (650). approved_total 0, "
+        "refused_total 650. H-901 is on panel.",
+        refused_total=650),
+
+    "CLM-9005": _approval_script(
+        "CLM-9005", "M-7001", "POL-8001",
+        [{"code": "70553", "amount": 650},
+         {"code": "99213", "amount": 180}], 180,
+        "99213 covered (180). 70553 refused under EX-22 advanced imaging "
+        "(650). approved_total 180, refused_total 650. H-901 is on panel.",
+        refused_total=650),
+
+    "CLM-9006": _approval_script(
+        "CLM-9006", "M-7001", "POL-8001",
+        [{"code": "99213", "amount": 6000}], 6000,
+        "Claim total 6000 equals the 6000 remaining on POL-8001; it does not "
+        "exceed the limit. 99213 covered. approved_total 6000."),
+
+    "CLM-9007": _approval_script(
+        "CLM-9007", "M-7002", "POL-8002",
+        [{"code": "99213", "amount": 160}], 160,
+        "Date of service equals the inclusive policy start 2026-09-01. "
+        "99213 covered. approved_total 160."),
+
+    "CLM-9008": _approval_script(
+        "CLM-9008", "M-7002", "POL-8002",
+        [{"code": "93000", "amount": 110}], 110,
+        "Date of service equals the inclusive policy end 2027-08-31. "
+        "93000 covered. approved_total 110."),
+
+    "CLM-9009": _approval_script(
+        "CLM-9009", "M-7004", "POL-8004",
+        [{"code": "99213", "amount": 210}], 210,
+        "99213 covered (210). H-902 recorded as non-panel in MY. "
+        "approved_total 210."),
+
+    "CLM-9010": _approval_script(
+        "CLM-9010", "M-7004", "POL-8004",
+        [{"code": "99213", "amount": 180},
+         {"code": "80053", "amount": 90},
+         {"code": "93000", "amount": 120},
+         {"code": "70553", "amount": 610}], 1000,
+        "All 4 lines have dispositions and are covered: 99213 (180), 80053 "
+        "(90), 93000 (120), 70553 (610). approved_total 1000."),
+
     # ---------------------------------------------------------------
     # CLM-9011 - two covered procedures with two valid pre-authorisations.
     # ---------------------------------------------------------------
@@ -276,6 +422,162 @@ SCRIPTS = {
          },
          "thought": "This is the ordinary short-run baseline with no "
                     "pre-authorisation lookup required."},
+    ],
+
+    "CLM-9016": _approval_script(
+        "CLM-9016", "M-7004", "POL-8004",
+        [{"code": "80053", "amount": 100}], 100,
+        "80053 covered (100). H-451 recorded as non-panel in MY. "
+        "approved_total 100."),
+
+    "CLM-9017": _approval_script(
+        "CLM-9017", "M-7002", "POL-8002",
+        [{"code": "47562", "amount": 2500},
+         {"code": "99213", "amount": 180}], 2680,
+        "Both lines covered: 47562 (2500), with PA-9001 cited and valid on "
+        "2026-09-16, and 99213 (180). approved_total 2680.",
+        preauthorisations=("47562",)),
+
+    "CLM-9018": _approval_script(
+        "CLM-9018", "M-7004", "POL-8004",
+        [{"code": "45378", "amount": 1050}], 1050,
+        "45378 covered (1050), and the required itemised bill was found. "
+        "approved_total 1050."),
+
+    "CLM-9019": _approval_script(
+        "CLM-9019", "M-7004", "POL-8004",
+        [{"code": "93000", "amount": 115},
+         {"code": "80053", "amount": 90},
+         {"code": "70553", "amount": 595}], 800,
+        "All 3 lines have dispositions and are covered: 93000 (115), 80053 "
+        "(90), and 70553 (595). approved_total 800."),
+
+    "CLM-9020": _approval_script(
+        "CLM-9020", "M-7002", "POL-8002",
+        [{"code": "93000", "amount": 130}], 130,
+        "93000 covered (130). H-902 recorded as non-panel in MY. "
+        "approved_total 130."),
+
+    "CLM-9021": _approval_script(
+        "CLM-9021", "M-7004", "POL-8004",
+        [{"code": "27447", "amount": 7800}], 7800,
+        "27447 covered (7800); PA-9002 cited and valid on 2026-09-20. "
+        "approved_total 7800.",
+        preauthorisations=("27447",)),
+
+    # ---------------------------------------------------------------
+    # CLM-9022 - required pre-authorisation is absent.
+    # ---------------------------------------------------------------
+    "CLM-9022": [
+        {"thought": "Retrieve the claim before checking its policy, procedure "
+                    "requirements and duplicate history.",
+         "calls": [("get_claim", {"claim_id": "CLM-9022"})]},
+        {"thought": "The policy, coverage and duplicate checks are all needed "
+                    "before deciding whether evidence is missing.",
+         "calls": [("lookup_policy", {"member_id": "M-7002"}),
+                   ("check_coverage", {"code": "29881",
+                                        "policy_id": "POL-8002"}),
+                   ("check_duplicate_claim", {
+                       "member_id": "M-7002", "hospital_id": "H-901",
+                       "date_of_service": "2026-09-21",
+                       "lines": [{"code": "29881", "amount": 1800}]})]},
+        {"thought": "Coverage says 29881 requires prior authorisation, so look "
+                    "for one valid on the service date.",
+         "calls": [("get_preauthorisation", {
+             "member_id": "M-7002", "procedure_code": "29881",
+             "date_of_service": "2026-09-21"})]},
+        {"thought": "No applicable authorisation was returned; ask for the exact "
+                    "dated reference rather than refusing the line.",
+         "final": {
+             "decision": "request_document",
+             "missing": "pre-authorisation reference for line 29881, valid on 2026-09-21",
+             "reason": "Line 29881 requires pre-authorisation. Request a "
+                       "pre-authorisation reference valid on 2026-09-21."}},
+    ],
+
+    # ---------------------------------------------------------------
+    # CLM-9023 - the recorded authorisation expired before service.
+    # ---------------------------------------------------------------
+    "CLM-9023": [
+        {"thought": "Retrieve the claim before checking its policy, procedure "
+                    "requirements and duplicate history.",
+         "calls": [("get_claim", {"claim_id": "CLM-9023"})]},
+        {"thought": "Check the policy, the one line's coverage requirements and "
+                    "exact duplicate history before requesting evidence.",
+         "calls": [("lookup_policy", {"member_id": "M-7001"}),
+                   ("check_coverage", {"code": "29881",
+                                        "policy_id": "POL-8001"}),
+                   ("check_duplicate_claim", {
+                       "member_id": "M-7001", "hospital_id": "H-901",
+                       "date_of_service": "2026-09-22",
+                       "lines": [{"code": "29881", "amount": 1750}]})]},
+        {"thought": "The procedure requires approval; test whether the existing "
+                    "record is valid on 2026-09-22.",
+         "calls": [("get_preauthorisation", {
+             "member_id": "M-7001", "procedure_code": "29881",
+             "date_of_service": "2026-09-22"})]},
+        {"thought": "PA-9004 ended on 2026-03-31 and therefore does not authorise "
+                    "this service; request a current reference.",
+         "final": {
+             "decision": "request_document",
+             "missing": "current pre-authorisation for line 29881, valid on 2026-09-22",
+             "reason": "PA-9004 was found for line 29881, but its validity ended "
+                       "2026-03-31. Request a current pre-authorisation valid on "
+                       "2026-09-22."}},
+    ],
+
+    # ---------------------------------------------------------------
+    # CLM-9024 - itemised bill required by 45378 is absent.
+    # ---------------------------------------------------------------
+    "CLM-9024": [
+        {"thought": "Retrieve the claim, including its attached document list.",
+         "calls": [("get_claim", {"claim_id": "CLM-9024"})]},
+        {"thought": "Check policy, coverage requirements and duplicate history; "
+                    "coverage identifies the procedure-specific document rule.",
+         "calls": [("lookup_policy", {"member_id": "M-7004"}),
+                   ("check_coverage", {"code": "45378",
+                                        "policy_id": "POL-8004"}),
+                   ("check_duplicate_claim", {
+                       "member_id": "M-7004", "hospital_id": "H-901",
+                       "date_of_service": "2026-09-23",
+                       "lines": [{"code": "45378", "amount": 1100}]})]},
+        {"thought": "The required itemised bill is not attached, so request that "
+                    "specific document for the affected line.",
+         "final": {
+             "decision": "request_document",
+             "missing": "itemised bill for line 45378",
+             "reason": "Line 45378 requires an itemised bill, but the claim has "
+                       "no attached documents. Request the itemised bill for 45378."}},
+    ],
+
+    # ---------------------------------------------------------------
+    # CLM-9025 - valid preauthorisation, but discharge summary absent.
+    # ---------------------------------------------------------------
+    "CLM-9025": [
+        {"thought": "Retrieve the claim before checking policy, coverage, "
+                    "documents and duplicate history.",
+         "calls": [("get_claim", {"claim_id": "CLM-9025"})]},
+        {"thought": "Check policy, coverage and duplicate history. Coverage "
+                    "determines both the pre-authorisation and document branches.",
+         "calls": [("lookup_policy", {"member_id": "M-7004"}),
+                   ("check_coverage", {"code": "62480",
+                                        "policy_id": "POL-8004"}),
+                   ("check_duplicate_claim", {
+                       "member_id": "M-7004", "hospital_id": "H-901",
+                       "date_of_service": "2026-09-24",
+                       "lines": [{"code": "62480", "amount": 3200}]})]},
+        {"thought": "The line requires prior authorisation, so verify it on the "
+                    "service date independently of the missing document.",
+         "calls": [("get_preauthorisation", {
+             "member_id": "M-7004", "procedure_code": "62480",
+             "date_of_service": "2026-09-24"})]},
+        {"thought": "PA-9003 is valid, but the required discharge summary is "
+                    "absent; request only that missing document.",
+         "final": {
+             "decision": "request_document",
+             "missing": "discharge summary for line 62480",
+             "reason": "PA-9003 is valid for line 62480 on 2026-09-24, but the "
+                       "required discharge summary is absent. Request that document."}},
     ],
 
     # ---------------------------------------------------------------
