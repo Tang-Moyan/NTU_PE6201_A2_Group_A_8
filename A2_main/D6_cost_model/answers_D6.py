@@ -45,7 +45,10 @@ HOURLY_RATE_USD = 38.0
 MINUTES_PER_ESCALATION = 12
 FAILURE_COST_SOURCE = (
     "Appendix A's default for Problem A: a claims assessor at US$38/hour, "
-    "12 minutes per escalation, giving US$7.60 per failure. We kept the "
+    "12 minutes per escalation, giving US$7.60 per failure. We use the "
+    "Class 5 escalation form, variable + (1-p) x failure, rather than the "
+    "Class 4 retry form: a wrong outcome here goes to a claims assessor, not "
+    "back into the loop. We kept the "
     "default rather than substituting a Singapore salary so that our figure "
     "is comparable with the brief's own worked example; the sensitivity "
     "section shows what happens if the true rate is lower.")
@@ -62,8 +65,8 @@ FIXED_MONTHLY = {
     "maintenance_amortised": 40.0,
 }
 
-TASKS_PER_MONTH = 4000   # Appendix A says volume has doubled; 2,000/month
-                         # before, so 4,000 after.
+TASKS_PER_MONTH = 8000   # The FAQ states Problem A's volume directly:
+                         # 8,000 claims a month (Problem B is 4,000).
 
 
 # =====================================================================
