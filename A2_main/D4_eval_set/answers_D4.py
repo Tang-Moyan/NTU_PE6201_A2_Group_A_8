@@ -562,7 +562,7 @@ JUDGEMENT_GRADER = (
     #"**如果用模型，必须在报告里说明** —— a model grading a model is a claim "
     #"that needs defending.",
     #example="person: rotating, one reviewer per batch of 10, named in "
-            "output/D4_judgement.json")
+    #         "output/D4_judgement.json")
 
 WHY_NOT_SUBSTRING = (
     "A required phrase may appear inside a factually incorrect or opposite "
