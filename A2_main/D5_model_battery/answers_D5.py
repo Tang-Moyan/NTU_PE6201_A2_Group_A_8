@@ -51,21 +51,24 @@ FRESH_CLONE_TESTED = TEMPLATE(
 # **价格必须自己去 vendor 页面核对。** scaffold 里的价格标注是
 # 2026-08-28 核对的，会过期。引用一个没核实过的价格正是 D6 扣分的地方。
 MODELS = [
-    {"slug": TEMPLATE("模型 1 的 OpenRouter slug", example="openai/gpt-4o-mini"),
-     "owner": TEMPLATE("负责人"),
-     "price_in": TEMPLATE("US$ / 百万 input token", example=0.10),
-     "price_out": TEMPLATE("US$ / 百万 output token", example=0.40),
-     "tier": TEMPLATE("cheap / mid / frontier", example="cheap")},
-    {"slug": TEMPLATE("模型 2 的 slug"),
-     "owner": TEMPLATE("负责人"),
-     "price_in": TEMPLATE("US$ / 百万 input token"),
-     "price_out": TEMPLATE("US$ / 百万 output token"),
-     "tier": TEMPLATE("cheap / mid / frontier")},
-    {"slug": TEMPLATE("模型 3 的 slug"),
-     "owner": TEMPLATE("负责人"),
-     "price_in": TEMPLATE("US$ / 百万 input token"),
-     "price_out": TEMPLATE("US$ / 百万 output token"),
-     "tier": TEMPLATE("cheap / mid / frontier")},
+    # 一人一个模型、一把自己的 key。brief 的两条硬约束：
+    #   (1) 至少跨两个价格档，且没有两人使用同一个 family
+    #   (2) 评估集与 v2 prompt 每人完全一致，只有 MODEL 这一个字符串不同
+    # 价格 2026-09-15 核实于 openrouter.ai/api/v1/models（US$ / 百万 token）。
+    # frontier 档（claude-fable-5.1 / gpt-6-astra，10/50）全集约 US$11.70，
+    # 超 brief 的每人 US$3 上限，故未排入。
+    # qwen/qwen3.8-flash 更便宜但不支持 tool calling，agent 无法使用。
+    {"slug": "google/gemini-3.8-flash",      "owner": "Jojo",
+     "price_in": 0.75,  "price_out": 3.75,  "tier": "mid"},
+    {"slug": "deepseek/deepseek-v4.1-flash", "owner": "Moyan",
+     "price_in": 0.15,  "price_out": 0.60,  "tier": "cheap"},
+    {"slug": "~openai/gpt-luna-latest",      "owner": "Ziyu",
+     "price_in": 0.20,  "price_out": 1.20,  "tier": "cheap"},
+    {"slug": "x-ai/grok-4.6",                "owner": "Xianer",
+     "price_in": 2.00,  "price_out": 6.00,  "tier": "mid"},
+    {"slug": "z-ai/glm-5.3",                 "owner": "Lufei",
+     "price_in": 1.40,  "price_out": 4.40,  "tier": "mid"},
+    # Keerthi 跑 D2(b) 的 v1 pass，跑在 google/gemini-3.8-flash 上，不占一行模型。
 ]
 
 PRICES_VERIFIED_ON = TEMPLATE(
