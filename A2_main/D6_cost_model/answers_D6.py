@@ -179,11 +179,12 @@ LEVERS = {
     4: {"what": "Success rate - sets layer 2, usually the biggest layer",
         "built_in": "D4",
         "before": "33.3% (27/81) - openai/gpt-4o-mini, cheap tier",
-        "after": "72.8% (59/81) - x-ai/grok-4.6, mid tier",
+        "after": "77.8% (63/81) - z-ai/glm-5.3, mid tier",
         "note": ("D5(b), same commit, same v2 prompt, same 45 cases, 81 "
-                 "trials: only the MODEL string differs. Four models span "
-                 "33.3% / 42.0% / 50.6% / 72.8%, and negative-case pass "
-                 "rates track them (33.3% / 37.0% / 50.0% / 66.7%), so the "
+                 "trials: only the MODEL string differs. Five models span "
+                 "33.3% / 42.0% / 50.6% / 72.8% / 77.8%, and negative-case "
+                 "pass rates track them (33.3% / 37.0% / 50.0% / 66.7% / "
+                 "66.7%), so the "
                  "spread is the models genuinely diverging on the hard "
                  "cases rather than noise on the easy ones. In layer-2 "
                  "terms that 39.5-point swing is US$3.00 of expected "

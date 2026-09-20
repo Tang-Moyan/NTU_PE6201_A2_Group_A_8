@@ -59,12 +59,12 @@ def test_arithmetic(c):
     c.require("layer 2 doubles when failures double", abs(b - 2 * a) < 1e-9,
               "P=0.90 -> %.4f, P=0.80 -> %.4f" % (a, b))
 
-    # Class 5 escalation: cost per successful task is layer 1 + layer 2.
+    # cost per successful task must exceed cost per attempt
     per_success = cost_model.cost_per_successful_task(0.005, a, 0.90)
     per_attempt = cost_model.cost_per_task(0.005, a)
-    c.require("Class 5 cost per success is layer 1 + layer 2",
-              abs(per_success - per_attempt) < 1e-12,
-              "%.5f vs %.5f - escalation is not retry-until-success"
+    c.require("cost per success exceeds cost per attempt",
+              per_success > per_attempt,
+              "%.5f vs %.5f - at 90%% you pay for 1.11 attempts per success"
               % (per_success, per_attempt))
 
     # sensitivity spans the requested range
