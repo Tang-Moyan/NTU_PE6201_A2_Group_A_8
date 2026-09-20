@@ -76,15 +76,15 @@ def cost_per_task(variable, fallback):
 
 
 def cost_per_successful_task(variable, fallback, success_rate):
-    """Class 5 escalation cost: layer 1 + layer 2.
+    """The number that actually matters.
 
-    A failed outcome is escalated to a human; it is not retried until the
-    model succeeds. Dividing by success_rate would apply the Class 4 retry
-    formula and double-count failure handling here.
+    Dividing by the success rate is the point: at 80% you pay for 1.25
+    attempts per success, and the failures you paid for are already in
+    layer 2.
     """
     if not 0.0 < success_rate <= 1.0:
         raise ValueError("success_rate must be in (0, 1]; got %r" % success_rate)
-    return variable + fallback
+    return (variable + fallback) / success_rate
 
 
 def monthly(variable, fallback, success_rate, fixed_monthly, tasks_per_month):
@@ -99,8 +99,7 @@ def monthly(variable, fallback, success_rate, fixed_monthly, tasks_per_month):
         "layer3_total": fixed_monthly,
         "total_usd": total,
         "successful_tasks": successes,
-        "per_successful_task": (total / tasks_per_month)
-        if tasks_per_month else None,
+        "per_successful_task": (total / successes) if successes else None,
     }
 
 
