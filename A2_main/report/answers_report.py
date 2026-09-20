@@ -23,10 +23,7 @@ PROBLEM_CHOSEN = "A"          # 这个仓库已经只做 Problem A，不用改
 
 REPO_URL = "https://github.com/Tang-Moyan/NTU_PE6201_A2_Group_A_8.git"
 
-VIDEO_URL = (
-    "PENDING: replace with the public 5-minute demo URL before NTULearn "
-    "submit (system running, one negative case live, every member speaks)."
-)
+VIDEO_URL = "https://youtu.be/oebeRgy6X3Q"
 
 
 # =====================================================================
