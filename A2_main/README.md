@@ -53,9 +53,11 @@ Default `BACKEND` in committed `config.py` is **`scripted`**. Live results alrea
 A2_main/
 ├── run_eval.py                 Marker entry (scripted)
 ├── config.py                   BACKEND / MODEL / BASE_URL + caps (D5 / D3)
-├── data/                       Fixtures, answer key, generators, check_my_data
+├── data/                       Fixtures + answer key (see below)
+│   ├── expected_outcomes_A.json   ★ Full labelled answer key (45 cases)
+│   └── data_A/member_*/…          Per-member shards that build the key
 ├── CONTRIBUTIONS.md            Who owned what
-├── results.json                Eval artefact for the report
+├── results.json                Eval artefact for the report (81 trials)
 │
 ├── D0_why_an_agent/            Ladder, good-run statements, s = P^(1/T)
 ├── D1_agent_loop/              ★ ReAct loop (agent.py)
@@ -125,6 +127,19 @@ On a finished submission, expect **`0`**.
 | Vendor neutrality | Single network site: `backends.py` `_vendor_http` | `test_D5.py` |
 
 These are **measurements**, not estimates (except where a file explicitly marks `estimated`).
+
+---
+
+## Answer key · `expected_outcomes` (for markers)
+
+Pass rates are scored against this labelled key. **Start here:**
+
+| File | Role |
+|---|---|
+| **`A2_main/data/expected_outcomes_A.json`** | Full answer key used by the harness — **45 cases** (ordinary ×1, negatives ×3 → **81** scripted trials in `results.json`) |
+| `A2_main/data/data_A/member_01/expected_outcomes.json` … `member_06/` | Per-member shards that were merged into the file above |
+
+`run_eval.py` / D4 load the combined key from `data/expected_outcomes_A.json`. A pass rate without this file is not a measurement.
 
 ---
 
