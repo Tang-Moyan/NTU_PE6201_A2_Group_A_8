@@ -44,10 +44,22 @@ def measured_inputs():
             "descriptor": descriptor, "battery": battery}
 
 
+def _live_rows(battery):
+    """Read live measurements from the merged file or owner shards."""
+    rows = list((battery or {}).get("live") or [])
+    if rows:
+        return rows
+    for owner in ("Jojo", "Moyan", "Keerthi", "Xianer", "Ziyu", "Lufei"):
+        shard = store.load("D5_battery_%s" % owner) or {}
+        rows.extend(shard.get("live") or [])
+    return rows
+
+
 def baseline():
     """Layers 1 and 2 for one run, from measured tokens and pass rate."""
     m = measured_inputs()
-    evaluation = m["eval"]
+    evaluation = next((r for r in _live_rows(m["battery"])
+                       if r.get("model") == A.EXPENSIVE_MODEL), None)
     if not evaluation or not evaluation.get("trials"):
         return None
     if not (is_filled(A.PRICE_IN_PER_M) and is_filled(A.PRICE_OUT_PER_M)):
@@ -70,7 +82,7 @@ def baseline():
             "success_rate": p,
             "failure_cost": f,
             "fallback": cost_model.layer2_fallback(p, f),
-            "estimated_tokens": evaluation.get("backend") != "live"}
+            "estimated_tokens": False}
 
 
 def report():
@@ -212,7 +224,7 @@ def _break_even(b):
             A.EXPENSIVE_MEASURED_SUCCESS_RATE is None:
         return None
 
-    live = (store.load("D5_battery") or {}).get("live") or []
+    live = _live_rows(store.load("D5_battery") or {})
     by_slug = {r["model"]: r for r in live}
     cheap = by_slug.get(A.CHEAP_MODEL)
     expensive = by_slug.get(A.EXPENSIVE_MODEL)
@@ -222,12 +234,12 @@ def _break_even(b):
     F = b["failure_cost"]
     C = cheap["cost_usd"] / max(1, cheap["trials"])
     e_variable = expensive["cost_usd"] / max(1, expensive["trials"])
-    e_p = float(A.EXPENSIVE_MEASURED_SUCCESS_RATE)
+    e_p = float(expensive["pass_rate"])
     E = cost_model.expensive_model_E(e_variable, e_p, F)
     be = cost_model.break_even_success_rate(C, E, F)
     return {"C": C, "E": E, "F": F, "break_even": be,
             "verdict": cost_model.break_even_verdict(
-                be, float(A.CHEAP_MEASURED_SUCCESS_RATE))}
+                be, float(cheap["pass_rate"]))}
 
 
 def _ledger(m):
@@ -250,7 +262,8 @@ def _ledger(m):
             desc["v2_avg_tokens"],
             (", v1 ~%.0f" % desc["v1_avg_tokens"])
             if desc.get("v1_avg_tokens") is not None else " (v1 not written)")
-    ev = m["eval"]
+    ev = next((r for r in _live_rows(m["battery"])
+               if r.get("model") == A.EXPENSIVE_MODEL), None)
     if ev:
         auto[4] = "measured %.1f%% over %d trial(s)" % (
             ev["pass_rate"] * 100, ev["trials"])
