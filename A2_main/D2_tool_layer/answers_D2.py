@@ -13,7 +13,7 @@ Three parts:
 Self-check:  python A2_main/D2_tool_layer/test_D2.py
 =====================================================================
 """
-from common.template import TEMPLATE
+# Answers file for D2 — no remaining TEMPLATE slots.
 
 # =====================================================================
 # D2(a) - Tool set: score every tool on three questions
@@ -301,14 +301,17 @@ DESCRIPTOR_EXPERIMENT_VERDICT = (
 #   turn 3  get_preauthorisation             cannot join turn 2 —
 #                                            until coverage answers, you
 #                                            do not know which line needs it
-DEPENDENCY_RULE = TEMPLATE(
-    "Write the dependency rule in a paragraph. Name which pair cannot run "
-    "in parallel and why.",
-    example="A pair may share a turn only when neither needs the other's "
-            "output. get_claim runs alone. The policy lookup, the hospital "
-            "lookup and one check_coverage per line are mutually independent "
-            "and share turn 2. get_preauthorisation cannot join them: which "
-            "line needs one is not known until check_coverage has answered.")
+DEPENDENCY_RULE = (
+    "A pair of tools may share a turn if and only if neither call needs the "
+    "other's output. get_claim therefore runs alone on turn 1: every later "
+    "tool needs the member, hospital, date and line items it returns. On "
+    "turn 2, lookup_policy, check_duplicate_claim and one check_coverage "
+    "per line are mutually independent, so they share the turn. "
+    "get_preauthorisation cannot join that turn: which line needs a "
+    "pre-authorisation is not known until check_coverage has answered. "
+    "issue_decision_letter stays last and gated - it depends on the "
+    "resolved lines and must not run speculatively."
+)
 
 # Each tool's prerequisites, as {tool: [whose output it needs]}.
 # The framework uses this to check that the turn grouping in your scripts

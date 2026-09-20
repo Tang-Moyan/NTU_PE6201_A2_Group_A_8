@@ -20,7 +20,6 @@ D5 - USER WORK FILE  ("The model battery")
 进度自查：  python A2_main/D5_model_battery/test_D5.py
 =====================================================================
 """
-from common.template import TEMPLATE
 
 # =====================================================================
 # D5(a) - 可复现的 scripted run
@@ -28,11 +27,11 @@ from common.template import TEMPLATE
 
 SCRIPTED_DEFAULT_CONFIRMED = True
 
-FRESH_CLONE_TESTED = TEMPLATE(
-    "确认在**全新 clone**、没有 key 的机器上跑过 `python run_eval.py`？"
-    "写测试的日期和人。",
-    example="2026-09-20, tested by <name> on a clean clone with no "
-            "OPENROUTER_API_KEY set")
+FRESH_CLONE_TESTED = (
+    "2026-09-20, tested by Tang Moyan on a clean working tree with "
+    "BACKEND=scripted and no OPENROUTER_API_KEY in the environment; "
+    "python A2_main/run_eval.py and D5 scripted battery both completed."
+)
 
 
 # =====================================================================
@@ -57,22 +56,41 @@ PRICES_VERIFIED_ON = (
 )
 
 BATTERY_SHAPE = (
-    "Planned: full 45-case set x 1 trial x each declared model, plus "
-    "negative-only cases x 3 trials per model. Live results not yet "
-    "written back into answers_D5 — see items still needing team input."
+    "Delivered: full 45-case set x 1 ordinary trial + negatives x 3 "
+    "(81 trials) per live model. Six shards merged into "
+    "output/D5_battery.json: glm-5.3 77.8%, grok-4.6 72.8%, "
+    "gemini-3.8-flash 50.6%, gemini v1-descriptor 43.2%, "
+    "gpt-luna-latest 42.0%, gpt-4o-mini 33.3%."
 )
 
-DIVERGENCE_FINDING = TEMPLATE(
-    "三个模型在哪里分歧？**预期就在 negative case 上分歧。**"
-    "要具体到 case_id 和 family。需要 D5 live battery 结果。")
+DIVERGENCE_FINDING = (
+    "Models diverge hardest on negative families, not on ordinary "
+    "approvals. On preauth_expired, glm-5.3 / grok pass 6/6 while "
+    "gpt-4o-mini and gemini-v2 both sit at 0/6 (e.g. CLM-8894): the "
+    "cheap and mid models treat expired PAs as hard policy failures or "
+    "stop early, instead of request_document. On partly_payable "
+    "(CLM-8842 / CLM-9005) glm reaches 3/3 while gpt-4o-mini is 0/3 - "
+    "mini escalates after claim+policy with trigger outside_policy_dates "
+    "even when DOS is in range. Duplicate_of_decided_claim is another "
+    "split: glm/grok/gemini 6/6, gpt-4o-mini 0/6. Shared weakness: "
+    "annual_limit_exceeded and all three prompt_injection families stay "
+    "near 0% even for glm - so the battery shows both model-tier gaps "
+    "and a prompt/grading contract the whole set still fails."
+)
 
-WHICH_MODEL_WE_SHIP = TEMPLATE(
-    "你们会上哪个模型，为什么？必须和 D6 盈亏平衡点一致。"
-    "需要 CHEAP/EXPENSIVE_MEASURED_SUCCESS_RATE。")
+WHICH_MODEL_WE_SHIP = (
+    "We would ship z-ai/glm-5.3 (Lufei, 77.8% / 66.7% on negatives), not "
+    "the cheap arm. D6 break-even against the gemini mid-tier baseline "
+    "needs ~50.5% success; gpt-4o-mini measured 33.3% (17 points short), "
+    "so its ~9x cheaper tokens are erased by US$7.60 escalations. glm "
+    "beats gemini on the same harness without collapsing the cost model: "
+    "layer 2 still dominates, and accuracy - not list price - decides."
+)
 
 VENDOR_NEUTRALITY_NOTE = (
-    "D5_model_battery/backends.py :: _live_call() is the only function "
-    "that knows a vendor exists. config.py holds BACKEND / MODEL / BASE_URL."
+    "D5_model_battery/backends.py :: _vendor_http() is the only network "
+    "call site (chat + generation usage). _live_call builds the request; "
+    "config.py holds BACKEND / MODEL / BASE_URL."
 )
 
 REASONING_MODEL_NOTE = None

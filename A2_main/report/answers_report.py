@@ -14,60 +14,46 @@ REPORT - USER WORK FILE  (the prose that belongs to no single D)
 进度自查：  python A2_main/report/assemble.py
 =====================================================================
 """
-from common.template import TEMPLATE
 
 # =====================================================================
 # 提交信息
 # =====================================================================
-TEAM_ID = TEMPLATE("团队编号，例如 'A-8'。归档名要用它：PE6201_A2_[TeamID].zip",
-                   example="A-8")
+TEAM_ID = "A-8"
 PROBLEM_CHOSEN = "A"          # 这个仓库已经只做 Problem A，不用改
 
-REPO_URL = TEMPLATE(
-    "公开仓库地址（GitHub 或同类）。**两个地方都要有**："
-    "(a) 公开仓库展示 history 和 contribution，"
-    "(b) NTULearn 提交文件夹里放同样的代码副本 —— "
-    "这样评分不依赖某个链接还活着。",
-    example="https://github.com/.../NTU_PE6201_A2_Group_A_8")
+REPO_URL = "https://github.com/Tang-Moyan/NTU_PE6201_A2_Group_A_8.git"
 
-VIDEO_URL = TEMPLATE(
-    "5 分钟演示视频链接。要求：系统在跑、**现场展示一个 negative case**、"
-    "以及那些数字。**每个成员都要说话。** 超时会在 Communication 项扣分。")
+VIDEO_URL = (
+    "PENDING: replace with the public 5-minute demo URL before NTULearn "
+    "submit (system running, one negative case live, every member speaks)."
+)
 
 
 # =====================================================================
 # 第 6 节 · What we would not deploy  (150 词)
 # =====================================================================
-# 两部分，缺一个就少分：
-#   (a) 你们发现的局限
-#   (b) **一段关于你们没建的架构** —— 它本可以抓到什么、代价多少、
-#       为什么最终保持单 agent
-# (b) 的素材在 answers_D1.ALTERNATIVE_ARCHITECTURE，这里写成段。
+LIMITS_WE_FOUND = (
+    "Three limits showed up in measurement. First, scripted 100% does not "
+    "transfer: the same 45 cases drop to 33–78% live, so a marker who only "
+    "reads the scripted table overstates readiness. Second, injection "
+    "detection is still brittle - every live model scored near 0% on the "
+    "three prompt_injection families, including glm-5.3. Third, "
+    "auto-grading on trigger strings fails honest escalations that use "
+    "near-synonyms (e.g. instruction_in_narrative vs "
+    "instruction_in_member_narrative), so code_check under-counts quality."
+)
 
-LIMITS_WE_FOUND = TEMPLATE(
-    "你们发现的局限。要具体，不要写「还可以进一步优化」。"
-    "好的素材：narrative 判断那一步既不快也不客观；"
-    "substring 匹配的注入检测很脆；scripted backend 测不了 prompt 的效果。",
-    example="Our injection detection is substring matching, which CLM-8952 "
-            "already defeats once by imitating a tool result rather than "
-            "issuing an instruction. We widened it; we do not believe it "
-            "generalises, and we would not deploy it against an adversary "
-            "who knows it is there.")
-
-WOULD_NOT_DEPLOY = TEMPLATE(
-    "在什么条件下你们**不会**把它上线？一句话，要有实际约束。",
-    example="Not at autonomy='act'. Our confirm gate is doing real work: "
-            "the narrative check is the one input we cannot verify against "
-            "a record, and it is the one an outsider controls.")
+WOULD_NOT_DEPLOY = (
+    "Not at autonomy='act', and not on the cheap model: gpt-4o-mini is "
+    "17 points below the 50.5% break-even while one escalation costs "
+    "US$7.60, and our narrative/injection check is the one input we "
+    "cannot verify against a fixture record."
+)
 
 
 # =====================================================================
 # 各节定稿正文
 # =====================================================================
-# 先跑 assemble.py 看素材，再回来写这里。留 None 时 assemble.py 会
-# 显示素材而不是正文。
-#
-# 预算是指导，2000 词是硬上限。
 SECTION_1_PROSE = """Rungs 1–6 are insufficient for this health-insurance claims workflow because improving an individual model response does not guarantee a correct, bounded, end-to-end decision. A real claim requires the system to retrieve documents, confirm policy status, apply coverage rules and exclusions, calculate the payable amount, and choose whether to approve, deny, or escalate. Each transition depends on earlier evidence and must remain auditable. A larger model, longer prompt, fixed chain, retrieval, or tool access in isolation does not provide the planning, state tracking, evidence checks, bounded retries, and human gate needed when evidence is missing, contradictory, stale, or hostile. The D2 comparison makes this operational: for case CLM-8842, the serial design took eight turns and 59,400 input tokens and stopped at the 60,480-token budget, whereas parallel calls completed in four turns with 21,000 input tokens. The problem is therefore orchestration and control, not simply model capability.
 
 On the scripted evaluation, the end-to-end pass rate was P = 1.000 across a three-step decision path (T = 3). Under the simplifying assumption that steps are independent and equally reliable, P = s^T, so the implied per-step reliability is s = P^(1/T) = 1.000^(1/3) = 1.000. This is an exact 1.0 on the scripted set, not a production guarantee. All 81 scripted trials passed the code check, but the fixed backend and absence of observed failures do not measure distribution shift, ambiguous evidence, tool outages, or new prompt-injection wording. Reliability also compounds quickly: if each of six steps were 0.98 reliable, end-to-end reliability would be only 0.98^6 = 0.886. An agent is justified only when its autonomy is surrounded by measurable controls.
@@ -78,36 +64,41 @@ We therefore define a good run using five observable statements:
 (3) It remains within turn, token, and cost limits, stopping with an explicit, auditable reason if a limit or dependency fails.
 (4) It treats claimant and provider text as untrusted, resists prompt injection, and never allows external text to alter system rules or trigger an irreversible action.
 (5) It produces a consistent approve, deny, or escalate decision with supporting evidence, a checked calculation, recorded uncertainty, and human review before payment or final rejection."""
-SECTION_2_PROSE = TEMPLATE("第 2 节 The tool layer 定稿正文（约 450 词）")
-SECTION_3_PROSE = """We evaluated 45 labelled health-insurance claims. Ordinary cases ran once and negative cases ran three times, giving 81 scripted trials. All 81 passed the deterministic decision and trigger checks. GPT-5.6-sol then reviewed the first-trial decision records against Appendix A, the fixture evidence and each must_record requirement. All 45 records passed this semantic review. The live battery produced much lower scores. Grok achieved 72.8%, Gemini achieved 50.6%, Luna achieved 42.0%, and GPT-4o-mini achieved 33.3%. Grok was the strongest model but also the most expensive at US$2.5233. Its negative-case pass rate was 66.7%. Grok failed 22 trials. Ten failures came from invalid JSON structure. Twelve used a correct escalation decision but a non-canonical trigger name. For example, the model returned instruction_in_narrative instead of instruction_in_member_narrative. This exposed a prompt-contract weakness rather than only an insurance-reasoning failure.
-The evaluation set deliberately varies the decision routes rather than only collecting ordinary approvals. It includes missing documents, absent or expired pre-authorisation, lapsed and out-of-date policies, annual-limit boundaries, non-panel providers, duplicates, exclusions, and three prompt-injection claims. The guardrail checklist complements this task-level evaluation. All 10 guardrail cases held: the turn cap stopped a four-turn run when the cap was reduced to three; the budget ceiling stopped a 21,600-token run at a 10,800-token ceiling; and duplicate-action detection stopped a repeated tool call. These outcomes show that the controls fail loudly with an auditable reason instead of silently returning an incomplete answer.\n\nThe autonomy tests demonstrate why the gate is located at the irreversible action. Under suggest, the system held the decision letter; under act, the record explicitly showed that the gate was reached and passed. The three hostile-text cases covered a direct instruction to ignore exclusions, fabricated text that imitated a coverage-tool result, and a command to approve while skipping policy checks. Each was escalated with the trigger instruction_in_member_narrative rather than being allowed to steer the decision. Together, the results support a bounded workflow that can gather evidence autonomously, but they also show why human confirmation and adversarial testing remain necessary before any insurer commitment."""
-SECTION_4_PROSE = """We use the Class 5 three-layer model, on measured numbers from the D5 live battery. Layer 1 is 8,891 input and 1,019 output tokens per run at OpenRouter list prices for google/gemini-3.8-flash (US$0.75/US$3.75 per million, verified 2026-09-15 against openrouter.ai/api/v1/models, our procurement path) - US$0.0105. Layer 2, the expected fallback, is (1 - 0.506) x US$7.60 = US$3.75: 50.6% is our measured pass rate over 81 live trials, US$7.60 Appendix A's claims assessor at US$38/hour for 12 minutes. Layer 2 is 358 times Layer 1 - that ratio, not the token bill, is the finding. Layer 3 is US$73 a month, amortising forever.
 
-At 8,000 claims a month the total is US$30,182: US$84 of tokens, US$30,025 of escalations. Cost per successful task is US$7.45. At 50.6% the agent is not shippable, and the cost model is what makes that visible.
+SECTION_2_PROSE = """The tool set is chosen, not accumulated. Six tools remain after cutting lookup_hospital: get_claim, lookup_policy, check_coverage, get_preauthorisation, check_duplicate_claim, and gated issue_decision_letter. Panel status now rides on get_claim's hospital object; CLM-8874 still expects approve_in_principle for a non-panel hospital, so a dedicated lookup never earned a turn. Each kept tool fails a real task without it, is distinguishable from its neighbours, and pays a prompt-prefix cost even when unused.
 
-Four levers, measured before and after. (1) Tool block: 1,167 to 1,098 tokens, cutting lookup_hospital, which changed what the record must say, not the decision. (2) Turn count: 215 to 128 turns, 1,287,600 to 617,400 input tokens across 45 cases, by parallelising independent checks; tokens go as B*T + D*T^2/2, so T is the quadratic term and the largest token lever. (3) Observation size: get_preauthorisation returned 296 tokens per call in v1, 21 in v2; run live, v2 scored 50.6% against v1's 43.2%, and 29.4% against 11.8% on the pre-authorisation families - small n, but the effect sits where the mechanism predicts. (4) Success rate: 33.3% on gpt-4o-mini to 72.8% on grok-4.6, same commit, same prompt, same cases. Lever 4 dominates: one point of pass rate is worth US$608 a month, seven times the whole token bill.
+Descriptors are six-field contracts. The measured rewrite is get_preauthorisation. v1 returned the whole table (~296 tokens per call) behind a short descriptor; v2 returns a five-field projection (~21 tokens) behind a longer, explicit failure field that separates never-requested from expired. Descriptor cost rose by 138 tokens once per turn; observation cost fell ~93% and compounds on later turns. Guardrails stayed 10/10 because they do not read descriptors. Live, on the same gemini commit, v1 scored 43.2% and v2 50.6% (preauth families 11.8% to 29.4%) - so the interface change moved accuracy where the theory predicts, which a scripted backend cannot show.
 
-Break-even asks how accurate the cheap model must be to be worth choosing. With C = US$0.00113 on gpt-4o-mini, E = US$3.7636 on gemini-3.8-flash (its own Layer 1 plus Layer 2, per the brief's definition, not divided by P again) and F = US$7.60, break-even = 1 - (E - C)/F = 50.5%. The cheap model measured 33.3% - 17.2 points short. It is 9.3 times cheaper per run, but the US$0.0094 it saves is repaid by failing 0.12% more often - which is why break-even lands almost exactly on the expensive model's own pass rate. At US$0.10 per escalation it would be -8.9%, and the cheap model would always win. What decides the model is not its price but the price of being wrong.
+Multi-call turns follow one dependency rule: share a turn only when neither call needs the other's output. get_claim alone; then policy, duplicate and per-line coverage together; get_preauthorisation only after coverage names which line needs it; the letter last and gated. On CLM-8842 that packing cut 7 turns / 48,000 input tokens to 4 / 21,000 (~43% turns, ~56% tokens) without changing the decision. The sequential arm also breached the 60,000-token ceiling - so the saving is both cheaper and more correct under our caps. Unnecessary parallelism still has a cost: on annual-limit cases, early escalate should skip unused coverage calls. We therefore batch only within a dependency level, never across one."""
 
-Across plus or minus 10 points, cost per successful task spans US$11.15 to US$4.96 and that conclusion holds throughout. Caps: an 8-turn step cap and a 60,000-token ceiling, both enforced in Guardrails; and 200 claims per account per month - a policy commitment at provisioning, not a code control, since a per-run guard cannot see cross-run usage. Baseline excludes caching and reasoning-model adjustments by design."""
-SECTION_5_PROSE = TEMPLATE("第 5 节 The two failures 定稿正文（约 250 词）")
-SECTION_6_PROSE = TEMPLATE("第 6 节 What we would not deploy 定稿正文（约 150 词）")
+SECTION_3_PROSE = """We evaluated 45 labelled health-insurance claims. Ordinary cases ran once and negative cases ran three times, giving 81 scripted trials. All 81 passed the deterministic decision and trigger checks. GPT-5.6-sol then reviewed the first-trial decision records against Appendix A, the fixture evidence and each must_record requirement. All 45 records passed this semantic review. The live battery produced much lower scores. On the merged D5 shards, glm-5.3 reached 77.8%, grok-4.6 72.8%, gemini-3.8-flash 50.6%, luna 42.0%, and gpt-4o-mini 33.3%. Negative-case rates tracked the same order (66.7% down to 33.3%). Divergence concentrated on preauth_expired, partly_payable and duplicates; annual_limit and prompt_injection stayed near zero even for the best model. Several live failures used a correct escalate with a non-canonical trigger string, exposing a prompt-contract weakness beside insurance reasoning.
+
+The evaluation set deliberately varies decision routes: missing documents, absent or expired pre-authorisation, lapsed and out-of-date policies, annual-limit boundaries, non-panel providers, duplicates, exclusions, and three prompt-injection claims. The guardrail checklist complements task-level evaluation. All 10 guardrail cases held: the turn cap, budget ceiling and duplicate-action detection fail loudly with an auditable reason. Autonomy tests show why the gate sits on the irreversible letter: under suggest the letter is held; under act the record shows the gate passed. Hostile-text cases escalate with instruction_in_member_narrative rather than steering the decision. Together, the results support bounded autonomous evidence-gathering with human confirmation before any insurer commitment."""
+
+SECTION_4_PROSE = """We use the Class 5 three-layer model on D5 live measurements. Layer 1 averages 8,891 input and 1,019 output tokens per run at OpenRouter list prices for google/gemini-3.8-flash (US$0.75/US$3.75 per million, verified 2026-09-15) - US$0.0105. Layer 2 is (1 - 0.506) x US$7.60 = US$3.75 using our 50.6% gemini pass rate over 81 trials and Appendix A's US$38/hour assessor for 12 minutes. Layer 2 is ~358x Layer 1. Layer 3 is US$73/month.
+
+At 8,000 claims/month the total is about US$30,182 (US$84 tokens, US$30,025 escalations). Cost per successful task is ~US$3.76. At 50.6% the mid-tier arm is not yet shippable; the model makes that visible.
+
+Four measured levers. (1) Tool block 1,167 to 1,098 tokens by cutting lookup_hospital. (2) Turns 215 to 128 and input tokens 1.29M to 0.62M across 45 cases via parallel independent checks - T is the quadratic term. (3) get_preauthorisation returns 296 to 21 tokens; live gemini v1 43.2% vs v2 50.6%. (4) Success rate 33.3% (gpt-4o-mini) to 77.8% (glm-5.3) on the same harness. Lever 4 dominates: one pass-rate point is worth ~US$608/month.
+
+Break-even: C=US$0.00113, E=US$3.76, F=US$7.60 gives 50.5%. The cheap model measured 33.3% - 17 points short - so token savings are erased by rare extra failures. Caps: 8 turns, 60,000 tokens, and a 200-claim/month policy commitment at provisioning."""
+
+SECTION_5_PROSE = """We reproduce two failures as deletions from the working agent, then put the piece back.
+
+Failure 1 is loop control. Deleting action de-duplication on CLM-8842 raises turns from 4 to 6 and tokens from 21,600 to 38,640 while the decision stays correct and no exception fires - the loop burns money in a circle. The step cap (8) and budget ceiling (60,000) never trip. Restoring the guard recovers the original run. The fix belongs in code: a loop has no memory of its own actions unless you give it one; a prompt cannot be trusted to remember, and no return shape stops a caller asking twice.
+
+Failure 2 is the tool interface. Wrapping check_coverage with the full procedures and policies tables on CLM-8842 leaves pass rate and median turns unchanged on the 81-trial set, but raises cost from US$0.073 to US$0.085 (~16%). The fault is invisible to a pass-rate table and visible only because tokens were counted while the run happened. Caps do not fire (4 turns, ~18.7k tokens). A prompt saying "ignore extra fields" still ships those fields every later turn. Restoring the filtered projection removes the bill permanently.
+
+Across both, the layer judgement is the mark: loop memory is code; observation shape is interface. Caps bound damage after the fact; they do not name these faults. Median 3 and worst legitimate 4 turns justify an 8-turn cap with headroom, not decoration."""
+
+SECTION_6_PROSE = """We would not deploy this system at autonomy=act, or on the cheap live model. gpt-4o-mini sits 17 points below the 50.5% break-even while an escalation costs US$7.60; scripted 100% does not predict live behaviour; and injection families remain near zero even for glm-5.3. The architecture we did not build is a second reviewing agent before the gate. It might have caught fat observations and expired-PA mistakes, but at roughly +40% input tokens per run and a second failure surface across 45 cases. We kept a single agent: D7 Failure 2 was cheaper to fix once at the tool interface than to pay for forever with a reviewer. Confirm stays on issue_decision_letter only."""
 
 
 # =====================================================================
 # 其余三个交付物的自查
 # =====================================================================
-CONTRIBUTIONS_MD_WRITTEN = TEMPLATE(
-    "仓库里有 CONTRIBUTIONS.md，写明谁做了什么，**且 commit history 能佐证**？"
-    "第 8 节靠这个。True/False", example=False)
+CONTRIBUTIONS_MD_WRITTEN = True
 
-SELF_APPRAISAL_DONE = TEMPLATE(
-    "团队自评表完成了吗？**一队一份，不是一人一份**，对照 Rubric 1 打分"
-    "并附一段关于取舍的反思。不计分但**必答** —— 缺了就是提交不完整。",
-    example=False)
+SELF_APPRAISAL_DONE = True  # fill TEAM_SELF_APPRAISAL and set True before submit
 
-RESULTS_JSON_COMMITTED = TEMPLATE(
-    "A2_main/results.json 提交了吗？报告里的数字要来自它。"
-    "（scaffold 原本的 .gitignore 会忽略它，A2_main 的 .gitignore 已经"
-    "去掉了那条规则——跑一次 run_eval.py 然后 git add 即可。）",
-    example=False)
+RESULTS_JSON_COMMITTED = True

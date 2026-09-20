@@ -1,0 +1,55 @@
+{
+  "name": "D6_cost",
+  "written_at": "2026-09-20T18:20:09",
+  "written_by": "D6/levers.py",
+  "payload": {
+    "baseline": {
+      "variable": 0.010490583333333334,
+      "tokens_in": 8890.777777777777,
+      "tokens_out": 1019.3333333333334,
+      "success_rate": 0.5061728395061729,
+      "failure_cost": 7.6,
+      "fallback": 3.753086419753086,
+      "estimated_tokens": false
+    },
+    "monthly": {
+      "tasks_per_month": 8000,
+      "layer1_total": 83.92466666666668,
+      "layer2_total": 30024.69135802469,
+      "layer3_total": 73.0,
+      "total_usd": 30181.616024691357,
+      "successful_tasks": 4049.382716049383,
+      "per_successful_task": 3.77270200308642
+    },
+    "sensitivity": [
+      [
+        0.4061728395061729,
+        4.5235770030864195
+      ],
+      [
+        0.4561728395061729,
+        4.14357700308642
+      ],
+      [
+        0.5061728395061729,
+        3.7635770030864197
+      ],
+      [
+        0.5561728395061729,
+        3.3835770030864194
+      ],
+      [
+        0.6061728395061728,
+        3.00357700308642
+      ]
+    ],
+    "break_even": {
+      "C": 0.0011293950617283952,
+      "E": 3.763577024691358,
+      "F": 7.6,
+      "break_even": 0.5049411013645224,
+      "verdict": "The cheap model falls short: it needs 50.5% and measured 33.3%, 17.2 points short. When failures are expensive, the price of the model barely matters - accuracy does."
+    },
+    "cost_per_successful_task": 3.7635770030864197
+  }
+}

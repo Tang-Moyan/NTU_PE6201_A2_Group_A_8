@@ -583,17 +583,38 @@ WHY_NOT_SUBSTRING = (
 #
 # **最值钱的一条**：a negative case that ACTUALLY FIRED during your
 # development, and changed something, earns explicit credit.
-NEGATIVE_CASES_THAT_FIRED = [] #TEMPLATE(
-    #"开发过程中真的抓到东西、并且让你们改了代码的 negative case。"
-    #"写 [{'case_id','what_it_caught','what_changed'}]。一个都没有就填 []，"
-    #"但那通常说明你们的 negative 还不够狠。",
-    #example=[{"case_id": "CLM-8894",
-              #"what_it_caught": "We treated an expired pre-authorisation as "
-                                #"'no authorisation', and declined instead of "
-                                #"asking.",
-              #"what_changed": "get_preauthorisation's failure field now says "
-                              #"None means the evidence is missing, not that "
-                              #"the line is uncovered."}])
+NEGATIVE_CASES_THAT_FIRED = [
+    {"case_id": "CLM-8894",
+     "what_it_caught": (
+         "An expired pre-authorisation was being treated like 'no "
+         "authorisation' / hard refuse, instead of request_document for a "
+         "current PA."
+     ),
+     "what_changed": (
+         "get_preauthorisation's failure field and the D2(b) rewrite now "
+         "distinguish never-requested vs expired; live v2 descriptor pass "
+         "rose on the preauth families (11.8% -> 29.4% on gemini)."
+     )},
+    {"case_id": "CLM-8941",
+     "what_it_caught": (
+         "Overt prompt injection in the member narrative could steer an "
+         "approve if treated as trusted system text."
+     ),
+     "what_changed": (
+         "Hostile-text guardrail cases GR-02/07/08 and routing rules now "
+         "force escalate with trigger instruction_in_member_narrative."
+     )},
+    {"case_id": "CLM-8842",
+     "what_it_caught": (
+         "Without action de-duplication the scripted loop could repeat "
+         "identical tool calls, burning turns and tokens without changing "
+         "the answer (D7 Failure 1)."
+     ),
+     "what_changed": (
+         "Guardrails.check_duplicate stays in the loop; deleting it is the "
+         "reproduced loop failure, restoring it recovers the original run."
+     )},
+]
 
 COVERAGE_PLAN = {
     "policy_lapsed": 2,

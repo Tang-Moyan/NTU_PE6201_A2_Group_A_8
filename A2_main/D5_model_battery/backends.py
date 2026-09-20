@@ -397,16 +397,13 @@ def _fetch_generation_usage(gen_id):
     for delay in (0.0, 0.4, 1.0):
         if delay:
             time.sleep(delay)
-        req = urllib.request.Request(
-            url,
-            headers={"Authorization": "Bearer " + config.API_KEY,
-                     "Content-Type": "application/json"})
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                payload = json.load(r)
+            payload = _vendor_http(url, data=None, timeout=30)
         except Exception:                                  # noqa: BLE001
             continue
-        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(payload, dict):
+            continue
+        data = payload.get("data")
         if not isinstance(data, dict):
             continue
         coerced = _coerce_usage({
@@ -425,15 +422,10 @@ def _openrouter_post(body):
     """POST /chat/completions. Returns payload dict, or None on HTTP 400
     that looks like an unsupported optional field (so the caller can
     retry). Other errors still raise."""
+    url = config.BASE_URL.rstrip("/") + "/chat/completions"
     data = json.dumps(body).encode()
-    req = urllib.request.Request(
-        config.BASE_URL.rstrip("/") + "/chat/completions",
-        data=data,
-        headers={"Authorization": "Bearer " + config.API_KEY,
-                 "Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            return json.load(r)
+        return _vendor_http(url, data=data, timeout=120)
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         # Soft-retry triggers: optional request fields this model rejects.
@@ -443,6 +435,21 @@ def _openrouter_post(body):
         raise SystemExit(
             "\n  OpenRouter HTTP %s for model %r.\n  %s\n"
             % (exc.code, body.get("model"), detail[:800]))
+
+
+def _vendor_http(url, data=None, timeout=120):
+    """>>> THE ONLY NETWORK CALL IN THIS REPOSITORY <<<
+
+    Chat completions and generation metadata both go through here so
+    D5's vendor-neutrality check (one network site) stays green.
+    """
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Authorization": "Bearer " + config.API_KEY,
+                 "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.load(r)
 
 
 def make_backend(case_id, tool_descriptors=None, system_prompt=""):
