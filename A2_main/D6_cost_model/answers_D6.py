@@ -102,16 +102,22 @@ EXPENSIVE_MODEL = "google/gemini-3.8-flash"       # 0.75 / 3.75 per M
 
 # Moyan full live battery (81 trials) on gpt-4o-mini — see D5_battery_Moyan.json
 CHEAP_MEASURED_SUCCESS_RATE = 0.333             # 27/81
-EXPENSIVE_MEASURED_SUCCESS_RATE = None  # TODO: after Jojo (or mid-tier) shard
+EXPENSIVE_MEASURED_SUCCESS_RATE = 0.506           # 41/81, see D5_battery_Jojo.json
 
-BREAK_EVEN_READING = TEMPLATE(
-    "一句话，带上你们两个实测数字。brief 说这是报告里最有用的一句话。"
-    "注意读出它的含义：便宜模型可能便宜十倍，却仍然必须落在贵模型一个"
-    "百分点以内才值得选 —— **当失败很贵时，模型价格几乎不重要，准确度才重要。**"
-    "反过来也成立：失败越便宜，token 价格越重要。",
-    example="Our cheap model needs 91.2% to be worth its saving and measured "
-            "84%, so we ship the mid-tier model despite it costing 10x per "
-            "run.")
+BREAK_EVEN_READING = (
+    "Our cheap model (openai/gpt-4o-mini) costs US$0.00113 a run against "
+    "US$0.01049 on the mid-tier model - 9.3x cheaper - but it would have to "
+    "reach 50.5% to be worth choosing, and it measured 33.3%: 17.2 points "
+    "short. The saving it offers is US$0.0094 a run; one escalation costs "
+    "US$7.60, so the cheap model buys back its entire price advantage by "
+    "failing just 0.12% more often. That is why the break-even (50.5%) lands "
+    "almost exactly on the mid-tier model's own measured pass rate (50.6%) - "
+    "when failure costs 700x a run, token price is a rounding error and the "
+    "break-even collapses onto accuracy. The reading generalises both ways: "
+    "if escalation were cheap - say US$0.10 - the break-even would fall to "
+    "-8.9%, i.e. the cheap model would win however bad it was, and token "
+    "price would be the only thing that mattered. What decides the model is "
+    "not its price but the price of being wrong.")
 
 
 # =====================================================================
@@ -156,14 +162,36 @@ LEVERS = {
         "note": ("v1 returned the whole preauthorisations table plus the "
                  "match; v2 returns the five-field projection. Descriptor "
                  "grew by 138 tokens (paid once per turn) while the return "
-                 "shrank ~93% (compounds on every later turn).")},
+                 "shrank ~93% (compounds on every later turn). We also ran "
+                 "the pass-rate arm live, because a scripted backend never "
+                 "reads the prompt and so cannot move on a descriptor "
+                 "rewrite: same model, same commit, same 45 cases, 81 "
+                 "trials, v1 43.2% vs v2 50.6%, and on negatives 38.9% vs "
+                 "50.0%. The effect concentrates where the theory says it "
+                 "should - on the four pre-authorisation families, the tool "
+                 "actually rewritten, 11.8% to 29.4% (2/17 to 5/17, so "
+                 "directional on small n rather than precise). v1's failure "
+                 "field collapsed to \"Returns null.\", which hides the "
+                 "difference between never-requested and expired; those are "
+                 "exactly the negative cases. So this lever cuts tokens AND "
+                 "buys accuracy - the only one of the three token levers "
+                 "that does.")},
     4: {"what": "Success rate - sets layer 2, usually the biggest layer",
         "built_in": "D4",
-        "before": TEMPLATE(
-            "改进前的实测 pass rate — 需要 D5 live battery 或你们记录的 "
-            "设计改动前后对比"),
-        "after": TEMPLATE("改进后的实测 pass rate"),
-        "note": TEMPLATE("是什么让它动了"),
+        "before": "33.3% (27/81) - openai/gpt-4o-mini, cheap tier",
+        "after": "72.8% (59/81) - x-ai/grok-4.6, mid tier",
+        "note": ("D5(b), same commit, same v2 prompt, same 45 cases, 81 "
+                 "trials: only the MODEL string differs. Four models span "
+                 "33.3% / 42.0% / 50.6% / 72.8%, and negative-case pass "
+                 "rates track them (33.3% / 37.0% / 50.0% / 66.7%), so the "
+                 "spread is the models genuinely diverging on the hard "
+                 "cases rather than noise on the easy ones. In layer-2 "
+                 "terms that 39.5-point swing is US$3.00 of expected "
+                 "escalation per task - 286x the US$0.0105 of tokens the "
+                 "better model costs to run. Note the scripted backend "
+                 "passes 100% of the same set: a scripted run measures the "
+                 "script, not the model, which is exactly why layer 2 has "
+                 "to come from the live battery."),
     },
 }
 
